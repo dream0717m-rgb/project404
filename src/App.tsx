@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   UserRole,
+  AuthUser,
   StudentProfile,
   WeeklySchedule,
   AssignmentItem,
@@ -14,15 +15,31 @@ import { TeacherDashboardView } from './components/TeacherDashboardView';
 import { ParentDashboardView } from './components/ParentDashboardView';
 import { JsonInspectorModal } from './components/JsonInspectorModal';
 import { ProgressDashboard } from './components/ProgressDashboard';
+import { LandingPage } from './components/LandingPage';
+import { AuthModal } from './components/AuthModal';
 import { Sparkles, RefreshCw } from 'lucide-react';
 
 export default function App() {
+  const [pageMode, setPageMode] = useState<'landing' | 'dashboard'>('landing');
   const [currentRole, setCurrentRole] = useState<UserRole>('student');
   const [activeView, setActiveView] = useState<UserRole | 'progress'>('student');
   const [highContrast, setHighContrast] = useState(false);
   const [dyslexiaFont, setDyslexiaFont] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isJsonModalOpen, setIsJsonModalOpen] = useState(false);
+
+  // Authentication State
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    try {
+      const stored = localStorage.getItem('erxes_balanced_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
+  const [authModalRole, setAuthModalRole] = useState<UserRole>('student');
 
   // Unified State
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
@@ -64,6 +81,73 @@ export default function App() {
   useEffect(() => {
     fetchState();
   }, []);
+
+  // Sync user role with currentRole on mount if logged in
+  useEffect(() => {
+    if (currentUser?.role) {
+      setCurrentRole(currentUser.role);
+      setActiveView(currentUser.role);
+    }
+  }, [currentUser]);
+
+  // Handle opening auth modal
+  const handleOpenAuth = (mode: 'signin' | 'signup', role: UserRole = 'student') => {
+    setAuthModalMode(mode);
+    setAuthModalRole(role);
+    setIsAuthModalOpen(true);
+  };
+
+  // Handle successful authentication
+  const handleAuthSuccess = (user: AuthUser) => {
+    setCurrentUser(user);
+    try {
+      localStorage.setItem('erxes_balanced_user', JSON.stringify(user));
+    } catch (e) {
+      console.warn('Could not save user to localStorage', e);
+    }
+    setCurrentRole(user.role);
+    setActiveView(user.role);
+    setPageMode('dashboard');
+  };
+
+  // Handle Logout
+  const handleLogout = () => {
+    setCurrentUser(null);
+    try {
+      localStorage.removeItem('erxes_balanced_user');
+    } catch (e) {
+      console.warn('Could not remove user from localStorage', e);
+    }
+    setPageMode('landing');
+  };
+
+  // Fast 1-Click Demo Login
+  const handleQuickDemo = async (role: UserRole) => {
+    let demoEmail = 'muruudul@erxes.io';
+    if (role === 'teacher') demoEmail = 'bold@erxes.io';
+    if (role === 'parent') demoEmail = 'batbayar@erxes.io';
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: demoEmail, password: 'password', role }),
+      });
+      const data = await res.json();
+      if (res.ok && data.user) {
+        handleAuthSuccess(data.user);
+      } else {
+        // Fallback local switch
+        setCurrentRole(role);
+        setActiveView(role);
+        setPageMode('dashboard');
+      }
+    } catch {
+      setCurrentRole(role);
+      setActiveView(role);
+      setPageMode('dashboard');
+    }
+  };
 
   // 1. Student Action: Toggle Assignment Checkbox
   const handleToggleAssignment = async (id: string) => {
@@ -108,8 +192,62 @@ export default function App() {
       const data = await res.json();
       setWeeklySchedule(data.state.weeklySchedule);
       setGemmaAnalysis(data.state.gemmaAnalysis);
+      setParentVerification(data.state.parentVerification);
+      setLastSyncTime(data.state.lastSyncTimestamp);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Student Action: Add Custom Activity to Weekly Schedule Matrix
+  const handleAddActivity = async (activityData: any) => {
+    try {
+      const res = await fetch('/api/schedule/activity/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(activityData),
+      });
+      if (!res.ok) throw new Error('Failed to save activity');
+      const data = await res.json();
+      setWeeklySchedule(data.state.weeklySchedule);
+      setGemmaAnalysis(data.state.gemmaAnalysis);
+      setParentVerification(data.state.parentVerification);
+      setLastSyncTime(data.state.lastSyncTimestamp);
+    } catch (err) {
+      console.error('Error adding activity:', err);
+    }
+  };
+
+  // Student Action: Delete Activity (Converts back to green FREE SLOT)
+  const handleDeleteActivity = async (activityId: string) => {
+    try {
+      const res = await fetch(`/api/schedule/activity/${activityId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete activity');
+      const data = await res.json();
+      setWeeklySchedule(data.state.weeklySchedule);
+      setGemmaAnalysis(data.state.gemmaAnalysis);
+      setParentVerification(data.state.parentVerification);
+      setLastSyncTime(data.state.lastSyncTimestamp);
+    } catch (err) {
+      console.error('Error deleting activity:', err);
+    }
+  };
+
+  // Recalculate Workload and AI Score
+  const handleRecalculateWorkload = async () => {
+    try {
+      const res = await fetch('/api/schedule/recalculate', {
+        method: 'POST',
+      });
+      if (!res.ok) throw new Error('Failed to recalculate workload');
+      const data = await res.json();
+      setGemmaAnalysis(data.gemmaAnalysis);
+      setWeeklySchedule(data.state.weeklySchedule);
+      setLastSyncTime(data.state.lastSyncTimestamp);
+    } catch (err) {
+      console.error('Error recalculating workload:', err);
     }
   };
 
@@ -182,9 +320,11 @@ export default function App() {
       }
       const text =
         currentRole === 'parent'
-          ? gemmaAnalysis?.parentReport.progressSummaryMongolian || 'Мөрөөдөл сурагчийн хичээлийн биелэлт 60 хувьтай байна.'
+          ? gemmaAnalysis?.parentReport.progressSummaryMongolian ||
+            'Мөрөөдөл сурагчийн хичээлийн биелэлт 60 хувьтай байна.'
           : currentRole === 'teacher'
-          ? gemmaAnalysis?.teacherRecommendations.deadlineAdjustments || 'Шалгалттай өдрийн бие даалтын хугацааг сунгахыг зөвлөж байна.'
+          ? gemmaAnalysis?.teacherRecommendations.deadlineAdjustments ||
+            'Шалгалттай өдрийн бие даалтын хугацааг сунгахыг зөвлөж байна.'
           : gemmaAnalysis?.aiSummaryMongolian || 'Сайн байна уу, Мөрөөдөл? Ачааллын түвшин дунд зэрэг байна.';
 
       const utterance = new SpeechSynthesisUtterance(text);
@@ -217,8 +357,13 @@ export default function App() {
         highContrast ? 'bg-black text-white' : 'bg-slate-50 text-slate-900'
       } ${dyslexiaFont ? 'font-mono tracking-wide' : 'font-sans'}`}
     >
-      {/* Persistent Global Navigation Bar with Role Switcher & Accessibility Tools */}
+      {/* Persistent Global Navigation Bar with Page Mode, Role Switcher & Accessibility Tools */}
       <GlobalNavbar
+        pageMode={pageMode}
+        onNavigatePage={(page) => setPageMode(page)}
+        currentUser={currentUser}
+        onOpenAuth={handleOpenAuth}
+        onLogout={handleLogout}
         currentRole={currentRole}
         activeView={activeView}
         onSelectRole={(role) => {
@@ -237,73 +382,90 @@ export default function App() {
         isParentApproved={parentVerification?.isScheduleApproved || false}
       />
 
-      {/* Main Role-Specific View or Dedicated Progress Dashboard */}
+      {/* Main View Area: Public Landing Page OR Role-Specific Dashboard Workspace */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Dedicated Progress Dashboard View */}
-        {activeView === 'progress' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => setActiveView(currentRole)}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
-              >
-                ← {currentRole === 'student' ? 'Сурагчийн самбар руу буцах' : currentRole === 'teacher' ? 'Багшийн самбар руу буцах' : 'Эцэг эхийн самбар руу буцах'}
-              </button>
-            </div>
-            <ProgressDashboard
-              assignments={assignments}
-              exams={upcomingExams}
-              gemmaAnalysis={gemmaAnalysis}
-              schedule={weeklySchedule}
-              studentName={studentProfile.name}
-              onToggleAssignment={handleToggleAssignment}
-              language="mn"
-            />
-          </div>
-        )}
-
-        {/* Role 1: Student View */}
-        {activeView === 'student' && (
-          <StudentDashboardView
-            student={studentProfile}
-            schedule={weeklySchedule}
-            assignments={assignments}
-            exams={upcomingExams}
-            gemmaAnalysis={gemmaAnalysis}
-            opportunities={opportunities}
-            onToggleAssignment={handleToggleAssignment}
-            onUpdateAboutMe={handleUpdateAboutMe}
-            onAddOpportunityToSchedule={handleAddOpportunityToSchedule}
-            isParentVerified={parentVerification?.isScheduleApproved || false}
+        {pageMode === 'landing' ? (
+          <LandingPage
+            onOpenAuth={handleOpenAuth}
+            onQuickDemo={handleQuickDemo}
           />
-        )}
+        ) : (
+          <>
+            {/* Dedicated Progress Dashboard View */}
+            {activeView === 'progress' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setActiveView(currentRole)}
+                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                  >
+                    ←{' '}
+                    {currentRole === 'student'
+                      ? 'Сурагчийн самбар руу буцах'
+                      : currentRole === 'teacher'
+                      ? 'Багшийн самбар руу буцах'
+                      : 'Эцэг эхийн самбар руу буцах'}
+                  </button>
+                </div>
+                <ProgressDashboard
+                  assignments={assignments}
+                  exams={upcomingExams}
+                  gemmaAnalysis={gemmaAnalysis}
+                  schedule={weeklySchedule}
+                  studentName={studentProfile.name}
+                  onToggleAssignment={handleToggleAssignment}
+                  language="mn"
+                />
+              </div>
+            )}
 
-        {/* Role 2: Teacher View */}
-        {activeView === 'teacher' && (
-          <TeacherDashboardView
-            student={studentProfile}
-            assignments={assignments}
-            exams={upcomingExams}
-            gemmaAnalysis={gemmaAnalysis}
-            onDeployAssignment={handleDeployAssignment}
-            onAutoExtendDeadline={handleAutoExtendDeadline}
-            isParentVerified={parentVerification?.isScheduleApproved || false}
-          />
-        )}
+            {/* Role 1: Student View */}
+            {activeView === 'student' && (
+              <StudentDashboardView
+                student={studentProfile}
+                schedule={weeklySchedule}
+                assignments={assignments}
+                exams={upcomingExams}
+                gemmaAnalysis={gemmaAnalysis}
+                opportunities={opportunities}
+                onToggleAssignment={handleToggleAssignment}
+                onUpdateAboutMe={handleUpdateAboutMe}
+                onAddOpportunityToSchedule={handleAddOpportunityToSchedule}
+                onAddActivity={handleAddActivity}
+                onDeleteActivity={handleDeleteActivity}
+                onRecalculateWorkload={handleRecalculateWorkload}
+                isParentVerified={parentVerification?.isScheduleApproved || false}
+              />
+            )}
 
-        {/* Role 3: Parent View */}
-        {activeView === 'parent' && (
-          <ParentDashboardView
-            student={studentProfile}
-            schedule={weeklySchedule}
-            assignments={assignments}
-            exams={upcomingExams}
-            gemmaAnalysis={gemmaAnalysis}
-            onApproveSchedule={handleApproveSchedule}
-            isParentVerified={parentVerification?.isScheduleApproved || false}
-            onVoiceCommand={handleVoiceCommand}
-            isSpeaking={isSpeaking}
-          />
+            {/* Role 2: Teacher View */}
+            {activeView === 'teacher' && (
+              <TeacherDashboardView
+                student={studentProfile}
+                assignments={assignments}
+                exams={upcomingExams}
+                gemmaAnalysis={gemmaAnalysis}
+                onDeployAssignment={handleDeployAssignment}
+                onAutoExtendDeadline={handleAutoExtendDeadline}
+                isParentVerified={parentVerification?.isScheduleApproved || false}
+              />
+            )}
+
+            {/* Role 3: Parent View */}
+            {activeView === 'parent' && (
+              <ParentDashboardView
+                student={studentProfile}
+                schedule={weeklySchedule}
+                assignments={assignments}
+                exams={upcomingExams}
+                gemmaAnalysis={gemmaAnalysis}
+                onApproveSchedule={handleApproveSchedule}
+                isParentVerified={parentVerification?.isScheduleApproved || false}
+                onVoiceCommand={handleVoiceCommand}
+                isSpeaking={isSpeaking}
+              />
+            )}
+          </>
         )}
       </main>
 
@@ -334,6 +496,15 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={handleAuthSuccess}
+        initialMode={authModalMode}
+        initialRole={authModalRole}
+      />
 
       {/* JSON Schema Inspector Modal */}
       <JsonInspectorModal

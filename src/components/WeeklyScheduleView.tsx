@@ -59,7 +59,7 @@ export const WeeklyScheduleView: React.FC<Props> = ({
     }
   });
 
-  const getCategoryBadge = (cat: ActivityCategory) => {
+  const getCategoryBadge = (cat: ActivityCategory | string) => {
     switch (cat) {
       case 'school':
         return {

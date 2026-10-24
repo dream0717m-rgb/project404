@@ -4,6 +4,26 @@ export type StressRiskLevel = 'Low' | 'Medium' | 'High';
 export type ConflictType = 'ExamConflict' | 'WorkloadConflict' | 'ExtracurricularOverlap';
 export type SeverityLevel = 'Low' | 'Medium' | 'High';
 
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  school?: string;
+  grade?: string;
+  subject?: string;
+  avatar?: string;
+  childName?: string;
+}
+
+export interface AuthResponse {
+  success?: boolean;
+  user: AuthUser;
+  token: string;
+  message?: string;
+}
+
+
 export interface ScheduleConflict {
   examOrAssignment: string;
   conflictDescriptionMongolian: string;
@@ -99,7 +119,23 @@ export type ActivityCategory =
   | 'club'
   | 'sleep'
   | 'rest'
-  | 'free_slot';
+  | 'free_slot'
+  | 'Class'
+  | 'Tutoring'
+  | 'Sports'
+  | 'Family'
+  | 'Volunteering'
+  | 'FreeSlot';
+
+export interface WeeklyScheduleItem {
+  id: string;
+  day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+  timeSlot: string; // e.g. "15:00 - 17:00"
+  activityTitle: string;
+  category: 'Class' | 'Tutoring' | 'Sports' | 'Family' | 'Volunteering' | 'FreeSlot';
+  isFreeSlot: boolean;
+  isCustomAdded: boolean; // true if added by student
+}
 
 export interface ScheduleBlock {
   id: string;
@@ -110,9 +146,12 @@ export interface ScheduleBlock {
   endTime: string;
   durationHours: number;
   title: string;
-  category: ActivityCategory;
+  category: ActivityCategory | string;
   location?: string;
   isFreeSlot?: boolean;
+  isCustomAdded?: boolean;
+  timeSlot?: string;
+  activityTitle?: string;
 }
 
 export interface WeeklySchedule {

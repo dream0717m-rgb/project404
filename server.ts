@@ -60,6 +60,8 @@ interface StateModel {
       category: string;
       location?: string;
       isFreeSlot?: boolean;
+      activityTitle?: string;
+      isCustomAdded?: boolean;
     }>;
   };
   assignments: Array<{
@@ -258,6 +260,30 @@ const dbState: StateModel = {
         category: 'homework',
       },
       {
+        id: 'b-tue-free',
+        dayIndex: 1,
+        dayName: 'Мягмар',
+        dayEn: 'Tuesday',
+        startTime: '18:30',
+        endTime: '20:00',
+        durationHours: 1.5,
+        title: 'FREE SLOT / OPEN TIME (Чөлөөт цаг)',
+        category: 'free_slot',
+        isFreeSlot: true,
+      },
+      {
+        id: 'b-thu-free',
+        dayIndex: 3,
+        dayName: 'Пүрэв',
+        dayEn: 'Thursday',
+        startTime: '18:00',
+        endTime: '20:00',
+        durationHours: 2.0,
+        title: 'FREE SLOT / OPEN TIME (Чөлөөт цаг)',
+        category: 'free_slot',
+        isFreeSlot: true,
+      },
+      {
         id: 'b-fri-1',
         dayIndex: 4,
         dayName: 'Баасан',
@@ -277,6 +303,52 @@ const dbState: StateModel = {
         endTime: '18:00',
         durationHours: 3.0,
         title: 'FREE SLOT / OPEN TIME (Чөлөөт цаг)',
+        category: 'free_slot',
+        isFreeSlot: true,
+      },
+      {
+        id: 'b-sat-1',
+        dayIndex: 5,
+        dayName: 'Бямба',
+        dayEn: 'Saturday',
+        startTime: '10:00',
+        endTime: '12:30',
+        durationHours: 2.5,
+        title: 'FREE SLOT / OPEN TIME (Чөлөөт цаг)',
+        category: 'free_slot',
+        isFreeSlot: true,
+      },
+      {
+        id: 'b-sat-2',
+        dayIndex: 5,
+        dayName: 'Бямба',
+        dayEn: 'Saturday',
+        startTime: '14:00',
+        endTime: '17:00',
+        durationHours: 3.0,
+        title: 'Graphic Design Self-Paced Practice',
+        category: 'club',
+      },
+      {
+        id: 'b-sun-1',
+        dayIndex: 6,
+        dayName: 'Ням',
+        dayEn: 'Sunday',
+        startTime: '10:00',
+        endTime: '13:00',
+        durationHours: 3.0,
+        title: 'Family Time & Rest (Гэр бүлийн цаг)',
+        category: 'rest',
+      },
+      {
+        id: 'b-sun-2',
+        dayIndex: 6,
+        dayName: 'Ням',
+        dayEn: 'Sunday',
+        startTime: '15:00',
+        endTime: '18:00',
+        durationHours: 3.0,
+        title: 'FREE SLOT / Weekly Review (Чөлөөт цаг)',
         category: 'free_slot',
         isFreeSlot: true,
       },
@@ -353,8 +425,39 @@ function recomputeAnalyticsLocally() {
   const completed = dbState.assignments.filter((a) => a.isCompleted).length;
   const completionPercentage = Math.round((completed / total) * 100);
 
-  // Detect conflicts: check if any assignment due on same date as an exam or busy day
+  // 1. Analyze Schedule Hours & Free Slots
+  const activeBlocks = dbState.weeklySchedule.blocks.filter(
+    (b) => !b.isFreeSlot && b.category !== 'free_slot' && b.category !== 'FreeSlot'
+  );
+  const freeBlocks = dbState.weeklySchedule.blocks.filter(
+    (b) => b.isFreeSlot || b.category === 'free_slot' || b.category === 'FreeSlot'
+  );
+  const totalActiveHours = activeBlocks.reduce((sum, b) => sum + (b.durationHours || 1.5), 0);
+
+  // Group hours per day to detect overloaded days
+  const dayHours: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+  const dayNames: Record<number, string> = {
+    0: 'Даваа',
+    1: 'Мягмар',
+    2: 'Лхагва',
+    3: 'Пүрэв',
+    4: 'Баасан',
+    5: 'Бямба',
+    6: 'Ням',
+  };
+
+  activeBlocks.forEach((b) => {
+    const idx = b.dayIndex ?? 0;
+    dayHours[idx] = (dayHours[idx] || 0) + (b.durationHours || 1.5);
+  });
+
+  const heavyDays = Object.entries(dayHours)
+    .filter(([_, hours]) => hours > 8.0)
+    .map(([idx, hours]) => `${dayNames[Number(idx)]} гараг (${hours.toFixed(1)} цаг)`);
+
+  // 2. Detect conflicts: check if any assignment due on same date as an exam or busy day
   const conflicts: Array<{ examOrAssignment: string; conflictDescriptionMongolian: string }> = [];
+  
   dbState.upcomingExams.forEach((exam) => {
     const overlappingHw = dbState.assignments.find((hw) => hw.dueDate === exam.examDate && !hw.isCompleted);
     if (overlappingHw) {
@@ -363,31 +466,60 @@ function recomputeAnalyticsLocally() {
         conflictDescriptionMongolian: `${exam.examDate} өдөр ${exam.subject} шалгалттай бөгөөд мөн өдөр ${overlappingHw.title} бие даалт дуусах тул хэт ачаалал үүсгэж байна.`,
       });
     }
+
+    // Check if exam day has > 8 hours of activities
+    if (dayHours[2] > 8.5 && exam.examDate === '2026-10-28') {
+      conflicts.push({
+        examOrAssignment: `Лхагва гарагийн давхар ачаалал (${exam.subject} + Бэлтгэл)`,
+        conflictDescriptionMongolian: `Лхагва гарагт нийт ${dayHours[2].toFixed(1)} цагийн ачаалалтай (шалгалт, давталт, сагсан бөмбөг давхацсан) тул амрах цаг хомсдож байна.`,
+      });
+    }
   });
 
-  // Calculate score: base score around 6.5, increases with conflicts or high uncompleted load
-  let workloadScore = 6.8;
-  if (conflicts.length > 0) workloadScore += 0.8;
-  if (completionPercentage < 50) workloadScore += 0.6;
-  if (completionPercentage > 80) workloadScore -= 0.8;
-  workloadScore = Math.min(9.8, Math.max(3.5, Number(workloadScore.toFixed(1))));
+  // Check if any day is overloaded (> 9 hours)
+  Object.entries(dayHours).forEach(([idx, hours]) => {
+    if (hours >= 9.5) {
+      conflicts.push({
+        examOrAssignment: `${dayNames[Number(idx)]} гарагийн хэт ачаалал`,
+        conflictDescriptionMongolian: `${dayNames[Number(idx)]} гарагт нийт ${hours.toFixed(1)} цагийн хуваарьтай байгаа нь стресс үүсгэх эрсдэлтэй.`,
+      });
+    }
+  });
+
+  // 3. Calculate Workload Score (1.0 - 10.0)
+  // Base calculation derived from weekly active hours, conflicts, and homework completion
+  let workloadScore = 4.5 + (totalActiveHours - 20) * 0.16;
+  if (conflicts.length > 0) workloadScore += conflicts.length * 0.55;
+  if (completionPercentage < 50) workloadScore += 0.5;
+  if (completionPercentage > 80) workloadScore -= 0.6;
+  if (freeBlocks.length >= 4) workloadScore -= 0.4;
+  if (freeBlocks.length <= 1) workloadScore += 0.6;
+
+  workloadScore = Math.min(9.8, Math.max(3.0, Number(workloadScore.toFixed(1))));
 
   let status: 'Balanced' | 'Moderate' | 'Overworked' = 'Moderate';
   if (workloadScore >= 7.8) status = 'Overworked';
   else if (workloadScore <= 5.5) status = 'Balanced';
 
-  // Matched opportunities based on aboutMe
+  // 4. Matched Opportunities based on aboutMe and free slots
   const interests = dbState.studentProfile.aboutMe.interests.map((i) => i.toLowerCase());
+  const freeSlotDays = freeBlocks.map((b) => b.dayName).filter(Boolean);
+
   const matched = dbState.opportunities.map((op) => {
-    let score = 90;
+    let score = 88;
     if (interests.some((i) => op.requiredSkills.some((s) => s.toLowerCase().includes(i)))) {
-      score = 96;
+      score += 8;
     }
+    if (freeBlocks.length > 0) {
+      score += 2;
+    }
+    const finalScore = Math.min(99, score);
+
     return {
       opportunityId: op.opportunityId,
       title: op.title,
-      matchScore: `${score}%`,
-      matchReasonMongolian: `Сурагчийн ${op.requiredSkills.join(', ')} ур чадварт нийцэж байгаа бөгөөд ${op.timeSlot} цагт чөлөөтэй амжилттай хэрэгжинэ.`,
+      matchScore: `${finalScore}%`,
+      matchReasonMongolian: `Сурагчийн сонирхол болон нийт ${freeBlocks.length} чөлөөт цагийн цонхонд (${freeSlotDays.slice(0, 3).join(', ') || 'Баасан'}) зохицож байна.`,
     };
   });
 
@@ -397,18 +529,16 @@ function recomputeAnalyticsLocally() {
   }
 
   const parentText = `[erxes BalanceEd] Мөрөөдөл нийт ${total} даалгавраас ${completed}-ыг (${completionPercentage}%) гүйцэтгээд байна. Хуваарийн баталгаажуулалт: ${
-    dbState.parentVerification.isScheduleApproved ? 'Баталгаажсан' : 'Хүлээгдэж буй'
-  }. Ачааллын түвшин ${workloadScore}/10 (${status}).`;
+    dbState.parentVerification.isScheduleApproved ? 'Баталгаажсан' : 'Шинэчлэгдсэн тул баталгаажуулалт шаардлагатай'
+  }. Долоо хоногийн нийт ачаалал ${workloadScore}/10 (${status}), чөлөөт цагийн цонх: ${freeBlocks.length}.`;
+
+  const busySummary = heavyDays.length > 0 ? `Ачаалал өндөртэй өдрүүд: ${heavyDays.join(', ')}.` : 'Долоо хоногийн өдрүүдэд ачаалал жигд тархсан байна.';
 
   dbState.gemmaAnalysis = {
     workloadScore,
     status,
     completionPercentage,
-    aiSummaryMongolian: `Сурагчийн 7 хоногийн даалгаврын биелэлт ${completionPercentage}%, нийт ачаалал ${workloadScore}/10 (${status}) түвшинд байна. ${
-      conflicts.length > 0
-        ? 'Анхааруулга: Шалгалт ба бие даалтын давхцал илэрсэн тул уян хатан зохицуулалт хийхийг зөвлөж байна.'
-        : 'Хуваарийн ноцтой давхцал байхгүй, хэвийн үргэлжилж байна.'
-    }`,
+    aiSummaryMongolian: `Мөрөөдлийн 7 хоногийн нийт идэвхтэй цаг: ${totalActiveHours.toFixed(1)} цаг, даалгаврын биелэлт ${completionPercentage}%, ачааллын түвшин ${workloadScore}/10 (${status}). ${busySummary} Одоогоор ${freeBlocks.length} чөлөөт цагийн цонх (FREE SLOT) байгаа нь нэмэлт боломж авах, амрахад таатай.`,
     scheduleConflicts: conflicts,
     matchedOpportunities: matched,
     teacherRecommendations: {
@@ -437,6 +567,166 @@ async function createServer() {
       })
     : null;
 
+  // Auth User Store & State
+  const usersStore: Array<{
+    id: string;
+    name: string;
+    email: string;
+    password?: string;
+    role: 'student' | 'teacher' | 'parent';
+    school?: string;
+    grade?: string;
+    subject?: string;
+    avatar?: string;
+    childName?: string;
+  }> = [
+    {
+      id: 'user-stu-01',
+      name: 'Мөрөөдөл (Student)',
+      email: 'muruudul@erxes.io',
+      password: 'password',
+      role: 'student',
+      school: '111-р сургууль',
+      grade: '12-A',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    },
+    {
+      id: 'user-tch-01',
+      name: 'Болд багш (Teacher)',
+      email: 'bold@erxes.io',
+      password: 'password',
+      role: 'teacher',
+      school: '111-р сургууль',
+      subject: 'Физик & Эко клуб хариуцсан',
+      avatar: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=150&auto=format&fit=crop&q=80',
+    },
+    {
+      id: 'user-par-01',
+      name: 'Баярхүү (Parent)',
+      email: 'batbayar@erxes.io',
+      password: 'password',
+      role: 'parent',
+      childName: 'Мөрөөдөл (12-A)',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    },
+  ];
+
+  // POST /api/auth/login
+  app.post('/api/auth/login', (req, res) => {
+    try {
+      const { email, password, role } = req.body;
+      if (!email) {
+        return res.status(400).json({ error: 'Имэйл хаяг шаардлагатай' });
+      }
+
+      // Check for exact matching user
+      let matched = usersStore.find(
+        (u) => u.email.toLowerCase() === email.trim().toLowerCase()
+      );
+
+      // If user provided a specific role and no user exists yet, synthesize or pick demo user for role
+      if (!matched) {
+        const targetRole = role || 'student';
+        const defaultRoleUser = usersStore.find((u) => u.role === targetRole);
+        if (defaultRoleUser) {
+          matched = {
+            ...defaultRoleUser,
+            email: email.trim(),
+            name: email.split('@')[0],
+          };
+          usersStore.push(matched);
+        } else {
+          matched = {
+            id: `usr-${Date.now()}`,
+            name: email.split('@')[0],
+            email: email.trim(),
+            role: targetRole,
+            school: '111-р сургууль',
+            grade: targetRole === 'student' ? '12-A' : undefined,
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+          };
+          usersStore.push(matched);
+        }
+      }
+
+      // If role specified during login, ensure returned user reflects the intended role
+      if (role && matched.role !== role) {
+        matched.role = role;
+      }
+
+      const token = `token-${matched.id}-${Date.now()}`;
+      const { password: _, ...userSafe } = matched;
+
+      return res.json({
+        user: userSafe,
+        token,
+        message: 'Амжилттай нэвтэрлээ',
+      });
+    } catch (err: any) {
+      console.error('Login error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/auth/register
+  app.post('/api/auth/register', (req, res) => {
+    try {
+      const { name, email, password, role, profileData, school, grade, subject, childName } = req.body;
+      if (!email || !name) {
+        return res.status(400).json({ error: 'Нэр болон имэйл хаяг шаардлагатай' });
+      }
+
+      const existing = usersStore.find(
+        (u) => u.email.toLowerCase() === email.trim().toLowerCase()
+      );
+
+      const targetRole = role || 'student';
+      let avatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+      if (targetRole === 'teacher') {
+        avatar = 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=150&auto=format&fit=crop&q=80';
+      } else if (targetRole === 'parent') {
+        avatar = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80';
+      }
+
+      const newUser = {
+        id: existing ? existing.id : `usr-${Date.now()}`,
+        name: name.trim(),
+        email: email.trim(),
+        password: password || 'defaultpass',
+        role: targetRole,
+        school: school || profileData?.school || '111-р сургууль',
+        grade: grade || profileData?.grade || (targetRole === 'student' ? '12-A' : undefined),
+        subject: subject || profileData?.subject || (targetRole === 'teacher' ? 'Физик' : undefined),
+        childName: childName || profileData?.childName || (targetRole === 'parent' ? 'Мөрөөдөл' : undefined),
+        avatar,
+      };
+
+      if (existing) {
+        Object.assign(existing, newUser);
+      } else {
+        usersStore.push(newUser);
+      }
+
+      // If registered as student, also update active student profile name
+      if (targetRole === 'student') {
+        dbState.studentProfile.name = newUser.name;
+      }
+
+      const token = `token-${newUser.id}-${Date.now()}`;
+      const { password: _, ...userSafe } = newUser;
+
+      return res.json({
+        success: true,
+        user: userSafe,
+        token,
+        message: 'Амжилттай бүртгэгдлээ',
+      });
+    } catch (err: any) {
+      console.error('Register error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Health check endpoint
   app.get('/api/health', (_req, res) => {
     res.json({
@@ -451,6 +741,7 @@ async function createServer() {
   app.get('/api/state', (_req, res) => {
     res.json(dbState);
   });
+
 
   // POST /api/ai/analyze-workload: Gemma 4 AI Analysis
   app.post('/api/ai/analyze-workload', async (req, res) => {
@@ -756,6 +1047,199 @@ Calculate completionPercentage accurately. Detect any schedule conflicts (e.g. e
       message: `${op.title} added to Friday schedule!`,
       state: dbState,
     });
+  });
+
+  // POST /api/schedule/activity & /api/schedule/activity/create: Student adds or replaces an activity on their Weekly Schedule Matrix
+  const handleCreateActivity = (req: any, res: any) => {
+    try {
+      const {
+        id,
+        day,
+        timeSlot,
+        activityTitle,
+        category,
+        startTime: customStart,
+        endTime: customEnd,
+        replaceSlotId,
+      } = req.body;
+
+      if (!activityTitle || !activityTitle.trim()) {
+        return res.status(400).json({ error: 'Activity title is required' });
+      }
+
+      // Map Day string to index and names
+      const dayLookup: Record<string, { index: number; nameMn: string; nameEn: string }> = {
+        '0': { index: 0, nameMn: 'Даваа', nameEn: 'Monday' },
+        '1': { index: 1, nameMn: 'Мягмар', nameEn: 'Tuesday' },
+        '2': { index: 2, nameMn: 'Лхагва', nameEn: 'Wednesday' },
+        '3': { index: 3, nameMn: 'Пүрэв', nameEn: 'Thursday' },
+        '4': { index: 4, nameMn: 'Баасан', nameEn: 'Friday' },
+        '5': { index: 5, nameMn: 'Бямба', nameEn: 'Saturday' },
+        '6': { index: 6, nameMn: 'Ням', nameEn: 'Sunday' },
+        'Monday': { index: 0, nameMn: 'Даваа', nameEn: 'Monday' },
+        'Даваа': { index: 0, nameMn: 'Даваа', nameEn: 'Monday' },
+        'Tuesday': { index: 1, nameMn: 'Мягмар', nameEn: 'Tuesday' },
+        'Мягмар': { index: 1, nameMn: 'Мягмар', nameEn: 'Tuesday' },
+        'Wednesday': { index: 2, nameMn: 'Лхагва', nameEn: 'Wednesday' },
+        'Лхагва': { index: 2, nameMn: 'Лхагва', nameEn: 'Wednesday' },
+        'Thursday': { index: 3, nameMn: 'Пүрэв', nameEn: 'Thursday' },
+        'Пүрэв': { index: 3, nameMn: 'Пүрэв', nameEn: 'Thursday' },
+        'Friday': { index: 4, nameMn: 'Баасан', nameEn: 'Friday' },
+        'Баасан': { index: 4, nameMn: 'Баасан', nameEn: 'Friday' },
+        'Saturday': { index: 5, nameMn: 'Бямба', nameEn: 'Saturday' },
+        'Бямба': { index: 5, nameMn: 'Бямба', nameEn: 'Saturday' },
+        'Sunday': { index: 6, nameMn: 'Ням', nameEn: 'Sunday' },
+        'Ням': { index: 6, nameMn: 'Ням', nameEn: 'Sunday' },
+      };
+
+      const matchedDay = dayLookup[day] || dayLookup['Monday'];
+
+      // Parse start and end time
+      let start = customStart || '15:00';
+      let end = customEnd || '17:00';
+
+      if (timeSlot && typeof timeSlot === 'string') {
+        const parts = timeSlot.split(/[-–—]/).map((p) => p.trim());
+        if (parts.length >= 2) {
+          start = parts[0];
+          end = parts[1];
+        }
+      }
+
+      // Compute duration
+      let durationHours = 2.0;
+      try {
+        const [sh, sm] = start.split(':').map(Number);
+        const [eh, em] = end.split(':').map(Number);
+        const diffMinutes = eh * 60 + (em || 0) - (sh * 60 + (sm || 0));
+        if (diffMinutes > 0) {
+          durationHours = Math.round((diffMinutes / 60) * 10) / 10;
+        }
+      } catch (e) {
+        durationHours = 2.0;
+      }
+
+      // Map Category
+      let internalCategory = 'sport';
+      const catLower = (category || '').toLowerCase();
+      if (catLower.includes('sport') || catLower.includes('спорт')) internalCategory = 'sport';
+      else if (catLower.includes('tutor') || catLower.includes('гүнзгий') || catLower.includes('давталт')) internalCategory = 'tutoring';
+      else if (catLower.includes('family') || catLower.includes('гэр') || catLower.includes('хүүхэд')) internalCategory = 'rest';
+      else if (catLower.includes('volunteer') || catLower.includes('сайн дур')) internalCategory = 'volunteer';
+      else if (catLower.includes('class') || catLower.includes('даалгавар') || catLower.includes('бие даалт')) internalCategory = 'homework';
+
+      const newBlockId = id || `b-custom-${Date.now()}`;
+      const newBlock = {
+        id: newBlockId,
+        dayIndex: matchedDay.index,
+        dayName: matchedDay.nameMn,
+        dayEn: matchedDay.nameEn,
+        startTime: start,
+        endTime: end,
+        durationHours,
+        title: activityTitle.trim(),
+        activityTitle: activityTitle.trim(),
+        category: internalCategory,
+        isFreeSlot: false,
+        isCustomAdded: true,
+      };
+
+      // If replacing an existing slot ID (e.g. replacing a free slot)
+      let replaced = false;
+      if (replaceSlotId) {
+        const targetIdx = dbState.weeklySchedule.blocks.findIndex((b) => b.id === replaceSlotId);
+        if (targetIdx !== -1) {
+          dbState.weeklySchedule.blocks[targetIdx] = newBlock;
+          replaced = true;
+        }
+      }
+
+      if (!replaced) {
+        // Check if there is an overlapping free slot on the same day
+        const existingFreeIdx = dbState.weeklySchedule.blocks.findIndex(
+          (b) =>
+            b.dayIndex === matchedDay.index &&
+            (b.isFreeSlot || b.category === 'free_slot' || b.category === 'FreeSlot') &&
+            b.startTime === start
+        );
+        if (existingFreeIdx !== -1) {
+          dbState.weeklySchedule.blocks[existingFreeIdx] = newBlock;
+        } else {
+          dbState.weeklySchedule.blocks.push(newBlock);
+        }
+      }
+
+      // Schedule has been modified by student -> Reset parent verification status
+      dbState.parentVerification.isScheduleApproved = false;
+      dbState.weeklySchedule.verifiedByParent = false;
+
+      // Recalculate AI analysis
+      recomputeAnalyticsLocally();
+
+      res.json({
+        success: true,
+        message: 'Custom activity added and analyzed successfully',
+        block: newBlock,
+        state: dbState,
+        gemmaAnalysis: dbState.gemmaAnalysis,
+      });
+    } catch (err: any) {
+      console.error('Error adding schedule activity:', err);
+      res.status(500).json({ error: err.message });
+    }
+  };
+
+  app.post('/api/schedule/activity', handleCreateActivity);
+  app.post('/api/schedule/activity/create', handleCreateActivity);
+
+  // DELETE /api/schedule/activity/:id: Student removes activity, turning that slot back into a green FREE SLOT
+  app.delete('/api/schedule/activity/:id', (req, res) => {
+    try {
+      const { id } = req.params;
+      const target = dbState.weeklySchedule.blocks.find((b) => b.id === id);
+
+      if (!target) {
+        return res.status(404).json({ error: 'Schedule activity not found' });
+      }
+
+      // Convert slot back to green FREE SLOT
+      target.title = 'FREE SLOT / OPEN TIME (Чөлөөт цаг)';
+      target.activityTitle = 'FREE SLOT / OPEN TIME';
+      target.category = 'free_slot';
+      target.isFreeSlot = true;
+      target.isCustomAdded = false;
+
+      // Schedule modified -> requires parent re-approval
+      dbState.parentVerification.isScheduleApproved = false;
+      dbState.weeklySchedule.verifiedByParent = false;
+
+      recomputeAnalyticsLocally();
+
+      res.json({
+        success: true,
+        message: 'Activity removed and converted to FREE SLOT successfully',
+        convertedSlot: target,
+        state: dbState,
+        gemmaAnalysis: dbState.gemmaAnalysis,
+      });
+    } catch (err: any) {
+      console.error('Error deleting activity:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/schedule/recalculate: Trigger Gemma 4 AI workload & conflict re-calculation
+  app.post('/api/schedule/recalculate', (_req, res) => {
+    try {
+      recomputeAnalyticsLocally();
+      res.json({
+        success: true,
+        gemmaAnalysis: dbState.gemmaAnalysis,
+        state: dbState,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // Vite dev middleware or static serving
