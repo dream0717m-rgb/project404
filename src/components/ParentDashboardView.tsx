@@ -20,7 +20,9 @@ import {
   Bell,
   Sparkles,
   Calendar,
+  TrendingUp,
 } from 'lucide-react';
+import { ProgressDashboard } from './ProgressDashboard';
 
 interface Props {
   student: StudentProfile;
@@ -45,6 +47,7 @@ export const ParentDashboardView: React.FC<Props> = ({
   onVoiceCommand,
   isSpeaking,
 }) => {
+  const [parentTab, setParentTab] = useState<'report' | 'charts'>('report');
   const [copied, setCopied] = useState(false);
   const [parentName, setParentName] = useState(student.parentContact.parentName || 'Баярхүү (Аав)');
   const [parentNote, setParentNote] = useState('Эцэг эхээр 7 хоногийн хуваарь батлав.');
@@ -126,10 +129,53 @@ export const ParentDashboardView: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Row 2: Academic Progress Gauge & Gemma 4 Parent Report */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        {/* Academic Progress Gauge */}
-        <div className="lg:col-span-5 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+      {/* Parent View Switcher */}
+      <div className="flex items-center justify-between bg-white p-2 rounded-2xl border border-slate-200 shadow-2xs">
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setParentTab('report')}
+            className={`px-3.5 py-2 text-xs font-bold rounded-xl flex items-center gap-2 transition-all ${
+              parentTab === 'report'
+                ? 'bg-violet-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Гэрийн тайлан & Зөвлөмж</span>
+          </button>
+          <button
+            onClick={() => setParentTab('charts')}
+            className={`px-3.5 py-2 text-xs font-bold rounded-xl flex items-center gap-2 transition-all ${
+              parentTab === 'charts'
+                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-xs'
+                : 'text-violet-700 hover:text-violet-900 hover:bg-violet-50 border border-violet-200/50'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4 text-amber-300" />
+            <span>Ахиц & Ачааллын График (Recharts)</span>
+          </button>
+        </div>
+
+        <span className="text-xs text-slate-500 hidden sm:inline pr-2 font-medium">
+          {parentTab === 'charts' ? 'Хүүхдийн 7 хоногийн даалгаврын график & ачаалал' : 'Эцэг эхийн зөвлөмж & нойрны хяналт'}
+        </span>
+      </div>
+
+      {parentTab === 'charts' ? (
+        <ProgressDashboard
+          assignments={assignments}
+          exams={exams}
+          gemmaAnalysis={gemmaAnalysis}
+          schedule={schedule}
+          studentName={student.name}
+          language="mn"
+        />
+      ) : (
+        <>
+          {/* Row 2: Academic Progress Gauge & Gemma 4 Parent Report */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            {/* Academic Progress Gauge */}
+            <div className="lg:col-span-5 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
               <h3 className="font-bold text-slate-900 text-base">
@@ -321,6 +367,8 @@ export const ParentDashboardView: React.FC<Props> = ({
           })}
         </div>
       </div>
+        </>
+      )}
 
       {/* Approval Modal */}
       {showApprovalModal && (

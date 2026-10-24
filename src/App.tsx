@@ -13,10 +13,12 @@ import { StudentDashboardView } from './components/StudentDashboardView';
 import { TeacherDashboardView } from './components/TeacherDashboardView';
 import { ParentDashboardView } from './components/ParentDashboardView';
 import { JsonInspectorModal } from './components/JsonInspectorModal';
+import { ProgressDashboard } from './components/ProgressDashboard';
 import { Sparkles, RefreshCw } from 'lucide-react';
 
 export default function App() {
   const [currentRole, setCurrentRole] = useState<UserRole>('student');
+  const [activeView, setActiveView] = useState<UserRole | 'progress'>('student');
   const [highContrast, setHighContrast] = useState(false);
   const [dyslexiaFont, setDyslexiaFont] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -218,7 +220,12 @@ export default function App() {
       {/* Persistent Global Navigation Bar with Role Switcher & Accessibility Tools */}
       <GlobalNavbar
         currentRole={currentRole}
-        onSelectRole={setCurrentRole}
+        activeView={activeView}
+        onSelectRole={(role) => {
+          setCurrentRole(role);
+          setActiveView(role);
+        }}
+        onSelectView={(view) => setActiveView(view)}
         highContrast={highContrast}
         onToggleHighContrast={() => setHighContrast(!highContrast)}
         dyslexiaFont={dyslexiaFont}
@@ -230,10 +237,33 @@ export default function App() {
         isParentApproved={parentVerification?.isScheduleApproved || false}
       />
 
-      {/* Main Role-Specific View */}
+      {/* Main Role-Specific View or Dedicated Progress Dashboard */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Dedicated Progress Dashboard View */}
+        {activeView === 'progress' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setActiveView(currentRole)}
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+              >
+                ← {currentRole === 'student' ? 'Сурагчийн самбар руу буцах' : currentRole === 'teacher' ? 'Багшийн самбар руу буцах' : 'Эцэг эхийн самбар руу буцах'}
+              </button>
+            </div>
+            <ProgressDashboard
+              assignments={assignments}
+              exams={upcomingExams}
+              gemmaAnalysis={gemmaAnalysis}
+              schedule={weeklySchedule}
+              studentName={studentProfile.name}
+              onToggleAssignment={handleToggleAssignment}
+              language="mn"
+            />
+          </div>
+        )}
+
         {/* Role 1: Student View */}
-        {currentRole === 'student' && (
+        {activeView === 'student' && (
           <StudentDashboardView
             student={studentProfile}
             schedule={weeklySchedule}
@@ -249,7 +279,7 @@ export default function App() {
         )}
 
         {/* Role 2: Teacher View */}
-        {currentRole === 'teacher' && (
+        {activeView === 'teacher' && (
           <TeacherDashboardView
             student={studentProfile}
             assignments={assignments}
@@ -262,7 +292,7 @@ export default function App() {
         )}
 
         {/* Role 3: Parent View */}
-        {currentRole === 'parent' && (
+        {activeView === 'parent' && (
           <ParentDashboardView
             student={studentProfile}
             schedule={weeklySchedule}

@@ -18,6 +18,8 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
+import { ProgressDashboard } from './ProgressDashboard';
+
 interface Props {
   student: StudentProfile;
   assignments: AssignmentItem[];
@@ -43,6 +45,7 @@ export const TeacherDashboardView: React.FC<Props> = ({
   onAutoExtendDeadline,
   isParentVerified,
 }) => {
+  const [teacherTab, setTeacherTab] = useState<'manage' | 'charts'>('manage');
   const [deployType, setDeployType] = useState<'assignment' | 'exam'>('assignment');
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('Physics');
@@ -220,8 +223,50 @@ export const TeacherDashboardView: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Row 2: Assignment & Exam Deployer Form */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+      {/* Teacher View Switcher: Manage Form vs. Recharts Progress Dashboard */}
+      <div className="flex items-center justify-between bg-white p-2 rounded-2xl border border-slate-200 shadow-2xs">
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setTeacherTab('manage')}
+            className={`px-3.5 py-2 text-xs font-bold rounded-xl flex items-center gap-2 transition-all ${
+              teacherTab === 'manage'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <GraduationCap className="w-4 h-4" />
+            <span>Даалгавар & Шалгалт удирдах</span>
+          </button>
+          <button
+            onClick={() => setTeacherTab('charts')}
+            className={`px-3.5 py-2 text-xs font-bold rounded-xl flex items-center gap-2 transition-all ${
+              teacherTab === 'charts'
+                ? 'bg-gradient-to-r from-emerald-600 to-indigo-600 text-white shadow-xs'
+                : 'text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 border border-emerald-200/50'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4 text-amber-300" />
+            <span>Сурагчийн Ахицын График (Recharts)</span>
+          </button>
+        </div>
+
+        <span className="text-xs text-slate-500 hidden sm:inline pr-2 font-medium">
+          {teacherTab === 'charts' ? 'Gemma 4 биелэлтийн муруй ба ачааллын аналитик' : 'Шинэ даалгавар өгөх ба хугацаа сунгах'}
+        </span>
+      </div>
+
+      {teacherTab === 'charts' ? (
+        <ProgressDashboard
+          assignments={assignments}
+          exams={exams}
+          gemmaAnalysis={gemmaAnalysis}
+          studentName={student.name}
+          language="mn"
+        />
+      ) : (
+        <>
+          {/* Row 2: Assignment & Exam Deployer Form */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div>
             <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
@@ -402,6 +447,8 @@ export const TeacherDashboardView: React.FC<Props> = ({
           </table>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 };

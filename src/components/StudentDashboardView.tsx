@@ -22,7 +22,9 @@ import {
   AlertTriangle,
   GraduationCap,
   Award,
+  TrendingUp,
 } from 'lucide-react';
+import { ProgressDashboard } from './ProgressDashboard';
 
 interface Props {
   student: StudentProfile;
@@ -49,6 +51,7 @@ export const StudentDashboardView: React.FC<Props> = ({
   onAddOpportunityToSchedule,
   isParentVerified,
 }) => {
+  const [studentViewMode, setStudentViewMode] = useState<'schedule' | 'charts'>('schedule');
   const [newInterest, setNewInterest] = useState('');
   const [newSkill, setNewSkill] = useState('');
   const [selectedDay, setSelectedDay] = useState<number>(0);
@@ -167,8 +170,53 @@ export const StudentDashboardView: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Row 2: Portfolio & "About Me" Interactive Tag Editor */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+      {/* View Switcher: Schedule & Tasks vs. Recharts Progress Dashboard */}
+      <div className="flex items-center justify-between bg-white p-2 rounded-2xl border border-slate-200 shadow-2xs">
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setStudentViewMode('schedule')}
+            className={`px-3.5 py-2 text-xs font-bold rounded-xl flex items-center gap-2 transition-all ${
+              studentViewMode === 'schedule'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Хуваарь & Даалгаврын Жагсаалт</span>
+          </button>
+          <button
+            onClick={() => setStudentViewMode('charts')}
+            className={`px-3.5 py-2 text-xs font-bold rounded-xl flex items-center gap-2 transition-all ${
+              studentViewMode === 'charts'
+                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-xs'
+                : 'text-indigo-700 hover:text-indigo-900 hover:bg-indigo-50 border border-indigo-200/50'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4 text-amber-300" />
+            <span>Ахиц & Ачааллын График (Recharts)</span>
+          </button>
+        </div>
+
+        <span className="text-xs text-slate-500 hidden sm:inline pr-2 font-medium">
+          {studentViewMode === 'charts' ? '7 хоногийн график тренд ба цагийн задаргаа' : 'Долоо хоногийн төлөвлөгөө & боломжууд'}
+        </span>
+      </div>
+
+      {/* Render Recharts Progress Dashboard or Standard Schedule Views */}
+      {studentViewMode === 'charts' ? (
+        <ProgressDashboard
+          assignments={assignments}
+          exams={exams}
+          gemmaAnalysis={gemmaAnalysis}
+          schedule={schedule}
+          studentName={student.name}
+          onToggleAssignment={onToggleAssignment}
+          language="mn"
+        />
+      ) : (
+        <>
+          {/* Row 2: Portfolio & "About Me" Interactive Tag Editor */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div>
             <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
@@ -467,6 +515,8 @@ export const StudentDashboardView: React.FC<Props> = ({
           ))}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 };

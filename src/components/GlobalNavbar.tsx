@@ -10,11 +10,14 @@ import {
   User,
   GraduationCap,
   Users,
+  TrendingUp,
 } from 'lucide-react';
 
 interface Props {
   currentRole: UserRole;
+  activeView?: UserRole | 'progress';
   onSelectRole: (role: UserRole) => void;
+  onSelectView?: (view: UserRole | 'progress') => void;
   highContrast: boolean;
   onToggleHighContrast: () => void;
   dyslexiaFont: boolean;
@@ -28,7 +31,9 @@ interface Props {
 
 export const GlobalNavbar: React.FC<Props> = ({
   currentRole,
+  activeView,
   onSelectRole,
+  onSelectView,
   highContrast,
   onToggleHighContrast,
   dyslexiaFont,
@@ -143,42 +148,54 @@ export const GlobalNavbar: React.FC<Props> = ({
 
         {/* Bottom bar: Role Selector Switcher & User Profile Badge */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 gap-3">
-          {/* 3-Role Switcher Buttons */}
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+          {/* 3-Role Switcher Buttons + Progress Dashboard Tab */}
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl flex-wrap">
             <button
               onClick={() => onSelectRole('student')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
-                currentRole === 'student'
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                currentRole === 'student' && activeView !== 'progress'
                   ? 'bg-white text-indigo-700 shadow-xs ring-1 ring-slate-200/80'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <User className="w-3.5 h-3.5 text-indigo-600" />
-              <span>👨‍🎓 Сурагчийн самбар (Student)</span>
+              <span>👨‍🎓 Сурагч</span>
             </button>
 
             <button
               onClick={() => onSelectRole('teacher')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
-                currentRole === 'teacher'
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                currentRole === 'teacher' && activeView !== 'progress'
                   ? 'bg-white text-emerald-700 shadow-xs ring-1 ring-slate-200/80'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
-              <span>👨‍🏫 Багшийн самбар (Teacher)</span>
+              <span>👨‍🏫 Багш</span>
             </button>
 
             <button
               onClick={() => onSelectRole('parent')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
-                currentRole === 'parent'
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                currentRole === 'parent' && activeView !== 'progress'
                   ? 'bg-white text-violet-700 shadow-xs ring-1 ring-slate-200/80'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Users className="w-3.5 h-3.5 text-violet-600" />
-              <span>👨‍👩‍👧 Эцэг эхийн самбар (Parent)</span>
+              <span>👨‍👩‍👧 Эцэг эх</span>
+            </button>
+
+            <button
+              onClick={() => onSelectView ? onSelectView('progress') : null}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                activeView === 'progress'
+                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-xs'
+                  : 'text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100/70 border border-indigo-200/60'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5 text-amber-300" />
+              <span>📊 Ахиц & Ачаалал (Progress)</span>
             </button>
           </div>
 
