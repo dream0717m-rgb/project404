@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Gemma4Response, StudentProfile, WeeklySchedule, OpportunityItem } from '../types';
-import { Send, CheckCircle2, AlertTriangle, Code, Terminal, Clock, Copy, Check } from 'lucide-react';
+import { Gemma4Response, StudentProfile, WeeklySchedule, OpportunityItem, AssignmentItem, ExamItem } from '../types';
+import { Send, Code, Terminal, Clock, Copy, Check, AlertTriangle } from 'lucide-react';
 
 interface Props {
   currentStudent: StudentProfile;
   currentSchedule: WeeklySchedule;
   opportunities: OpportunityItem[];
+  assignments: AssignmentItem[];
+  exams: ExamItem[];
   onAnalysisResult: (result: Gemma4Response) => void;
   language: 'mn' | 'en';
 }
@@ -14,12 +16,11 @@ export const ApiSandbox: React.FC<Props> = ({
   currentStudent,
   currentSchedule,
   opportunities,
+  assignments,
+  exams,
   onAnalysisResult,
   language,
 }) => {
-  const [customNotes, setCustomNotes] = useState(
-    'Лхагва гарагт сургуулийн сагсан бөмбөгийн лигийн тоглолттой тул бие даалт хойшлуулах шаардлага гарч болзошгүй.'
-  );
   const [isLoading, setIsLoading] = useState(false);
   const [responseJson, setResponseJson] = useState<any>(null);
   const [responseTimeMs, setResponseTimeMs] = useState<number | null>(null);
@@ -36,10 +37,23 @@ export const ApiSandbox: React.FC<Props> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          studentProfile: currentStudent,
+          studentProfile: {
+            name: currentStudent.name,
+            grade: currentStudent.grade,
+            school: currentStudent.school,
+            aboutMe: currentStudent.aboutMe,
+          },
+          parentVerification: {
+            isScheduleApproved: currentSchedule.verifiedByParent,
+            approvedDate: currentSchedule.verifiedDate || '2026-10-24',
+            parentNote: currentSchedule.parentNote || 'Хүүхдийн хичээлээс гадуурх хуваарь үнэн болно.',
+          },
           weeklySchedule: currentSchedule,
-          opportunities,
-          customNotes,
+          teacherAssignmentsAndExams: {
+            assignments,
+            upcomingExams: exams,
+          },
+          availableOpportunitiesHub: opportunities,
         }),
       });
 
@@ -83,53 +97,37 @@ export const ApiSandbox: React.FC<Props> = ({
         </div>
         <p className="text-xs text-slate-500 leading-relaxed">
           {language === 'mn'
-            ? 'Энэхүү санбокс нь Gemma 4 AI EdTech Assistant-ийн API-г шууд шалгах, шаардлагатай JSON бүтцийг 100% баталгаажуулахад зориулагдсан.'
-            : 'Interactive developer sandbox for testing Gemma 4 API payload and strict JSON output.'}
+            ? 'Сурагчийн профайл, эцэг эхийн баталгаажуулалт, багшийн даалгавар, шалгалтууд болон боломжуудыг нэгтгэн Gemma 4 API руу илгээж шалгана.'
+            : 'Interactive developer sandbox for testing Gemma 4 API with assignments, exams, and parent approval.'}
         </p>
 
         {/* Input parameters */}
-        <div className="mt-4 space-y-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Багш / Эцэг эхийн нэмэлт тэмдэглэл (Custom Teacher / Parent Notes):
-            </label>
-            <textarea
-              rows={2}
-              value={customNotes}
-              onChange={(e) => setCustomNotes(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
+        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+          <span className="text-xs text-slate-600">
+            Active payload: <strong>{currentStudent.name}</strong> •{' '}
+            <strong>{assignments.length} assignments</strong> •{' '}
+            <strong>{exams.length} exams</strong>
+          </span>
 
-          <div className="flex items-center justify-between pt-1">
-            <span className="text-xs text-slate-500">
-              Payload includes: <strong>{currentStudent.name}</strong>,{' '}
-              <strong>{currentSchedule.blocks.length} schedule blocks</strong>,{' '}
-              <strong>{opportunities.length} opportunities</strong>
-            </span>
-
-            <button
-              onClick={handleSendTestRequest}
-              disabled={isLoading}
-              className={`px-4 py-2 rounded-xl text-xs font-bold text-white flex items-center gap-2 shadow-sm transition-all ${
-                isLoading
-                  ? 'bg-indigo-400 cursor-not-allowed'
-                  : 'bg-indigo-600 hover:bg-indigo-700'
-              }`}
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Executing Gemma 4...</span>
-                </>
-              ) : (
-                <>
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Send Test Request</span>
-                </>
-              )}
-            </button>
-          </div>
+          <button
+            onClick={handleSendTestRequest}
+            disabled={isLoading}
+            className={`px-4 py-2 rounded-xl text-xs font-bold text-white flex items-center gap-2 shadow-sm transition-all ${
+              isLoading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'
+            }`}
+          >
+            {isLoading ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Running Gemma 4...</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-3.5 h-3.5" />
+                <span>Send Test Request</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -177,7 +175,7 @@ export const ApiSandbox: React.FC<Props> = ({
             <pre>{JSON.stringify(responseJson, null, 2)}</pre>
           ) : (
             <div className="text-slate-500 italic py-8 text-center">
-              Click "Send Test Request" above to trigger Gemma 4 analysis and inspect the exact JSON response object.
+              Click "Send Test Request" above to execute Gemma 4 analysis and inspect the exact JSON response object.
             </div>
           )}
         </div>

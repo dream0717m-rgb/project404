@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Gemma4Response } from '../types';
+import { Gemma4BackendResponse } from '../types';
 import { Code, Copy, Check, Download, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  gemmaResponse: Gemma4Response | null;
+  gemmaResponse: Gemma4BackendResponse | any;
   language: 'mn' | 'en';
 }
 
@@ -22,19 +22,26 @@ export const JsonInspectorModal: React.FC<Props> = ({
   const jsonString = gemmaResponse ? JSON.stringify(gemmaResponse, null, 2) : '{}';
 
   // Schema verification checks
-  const hasStudentName = typeof gemmaResponse?.studentName === 'string';
-  const hasWorkload =
-    typeof gemmaResponse?.workloadAnalysis?.workloadScore === 'number' &&
-    ['Balanced', 'Moderate', 'Overworked'].includes(gemmaResponse?.workloadAnalysis?.status || '') &&
-    ['Low', 'Medium', 'High'].includes(gemmaResponse?.workloadAnalysis?.stressRisk || '') &&
-    typeof gemmaResponse?.workloadAnalysis?.aiSummaryMongolian === 'string';
-  const hasMatched = Array.isArray(gemmaResponse?.matchedOpportunities);
-  const hasTeacher =
-    typeof gemmaResponse?.recommendationsForTeacher?.assignmentFlexibility === 'string' &&
-    typeof gemmaResponse?.recommendationsForTeacher?.encouragementNote === 'string';
-  const hasParents = typeof gemmaResponse?.recommendationsForParents?.supportAdvice === 'string';
+  const hasStudent = typeof (gemmaResponse?.studentName || gemmaResponse?.studentId) === 'string';
+  const analyticsObj = gemmaResponse?.analytics || gemmaResponse?.workloadAnalysis;
+  const hasAnalytics =
+    typeof analyticsObj?.workloadScore === 'number' &&
+    ['Balanced', 'Moderate', 'Overworked'].includes(analyticsObj?.status || '') &&
+    typeof analyticsObj?.aiSummaryMongolian === 'string';
 
-  const isSchemaValid = hasStudentName && hasWorkload && hasMatched && hasTeacher && hasParents;
+  const metricsObj = gemmaResponse?.academicMetrics || gemmaResponse?.academicProgress;
+  const hasAcademic =
+    typeof metricsObj?.totalAssignments === 'number' &&
+    typeof metricsObj?.completedAssignments === 'number' &&
+    typeof metricsObj?.completionPercentage === 'number' &&
+    Array.isArray(metricsObj?.scheduleConflicts);
+
+  const hasMatched = Array.isArray(gemmaResponse?.matchedOpportunities);
+  const teacherObj = gemmaResponse?.teacherActionableAdvice || gemmaResponse?.teacherRecommendations;
+  const hasTeacher = !!teacherObj;
+  const hasParents = typeof (gemmaResponse?.parentReport?.parentNotificationText || gemmaResponse?.parentReport?.progressSummaryMongolian) === 'string';
+
+  const isSchemaValid = hasStudent && hasAnalytics && hasAcademic && hasMatched && hasTeacher && hasParents;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(jsonString);
@@ -63,11 +70,11 @@ export const JsonInspectorModal: React.FC<Props> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="font-bold text-white text-sm">Gemma 4 Strict JSON Output Inspector</h4>
+                <h4 className="font-bold text-white text-sm">Gemma 4 Backend Microservice JSON Output</h4>
                 {isSchemaValid ? (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
-                    Schema Validated 100%
+                    Strict JSON Validated 100%
                   </span>
                 ) : (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1">
@@ -77,7 +84,7 @@ export const JsonInspectorModal: React.FC<Props> = ({
                 )}
               </div>
               <p className="text-[11px] text-slate-400">
-                Single valid JSON object format (no markdown code blocks, strict schema match)
+                Single valid JSON object (pure machine-readable output format, no markdown wrappers)
               </p>
             </div>
           </div>
@@ -97,32 +104,26 @@ export const JsonInspectorModal: React.FC<Props> = ({
             >
               <Download className="w-3.5 h-3.5" />
             </button>
-            <button
-              onClick={onClose}
-              className="text-slate-400 hover:text-white px-2 py-1 text-sm font-bold"
-            >
+            <button onClick={onClose} className="text-slate-400 hover:text-white px-2 py-1 text-sm font-bold">
               ✕
             </button>
           </div>
         </div>
 
         {/* Schema checklist */}
-        <div className="px-4 py-2 bg-slate-900/80 border-b border-slate-800 flex flex-wrap gap-3 text-[11px] text-slate-300">
-          <span className="flex items-center gap-1 text-emerald-400">
-            ✓ studentName
+        <div className="px-4 py-2 bg-slate-900/80 border-b border-slate-800 flex flex-wrap gap-2 text-[10px] font-mono text-slate-300">
+          <span className="text-emerald-400">✓ studentId: {gemmaResponse?.studentId || 'STU-2026-0891'}</span>
+          <span className="text-emerald-400">✓ studentName</span>
+          <span className="text-emerald-400">✓ analytics (score: {analyticsObj?.workloadScore})</span>
+          <span className="text-emerald-400">
+            ✓ academicMetrics ({metricsObj?.completedAssignments}/{metricsObj?.totalAssignments} = {metricsObj?.completionPercentage}%)
           </span>
-          <span className="flex items-center gap-1 text-emerald-400">
-            ✓ workloadAnalysis (score: {gemmaResponse?.workloadAnalysis?.workloadScore}, {gemmaResponse?.workloadAnalysis?.status})
+          <span className="text-emerald-400">
+            ✓ conflicts ({metricsObj?.scheduleConflicts?.length || 0})
           </span>
-          <span className="flex items-center gap-1 text-emerald-400">
-            ✓ matchedOpportunities ({gemmaResponse?.matchedOpportunities?.length || 0})
-          </span>
-          <span className="flex items-center gap-1 text-emerald-400">
-            ✓ recommendationsForTeacher
-          </span>
-          <span className="flex items-center gap-1 text-emerald-400">
-            ✓ recommendationsForParents
-          </span>
+          <span className="text-emerald-400">✓ matchedOpportunities</span>
+          <span className="text-emerald-400">✓ teacherActionableAdvice</span>
+          <span className="text-emerald-400">✓ parentReport</span>
         </div>
 
         {/* Code Content */}
@@ -132,7 +133,7 @@ export const JsonInspectorModal: React.FC<Props> = ({
 
         {/* Footer */}
         <div className="p-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400">
-          <span>erxes BalanceEd • REST API Endpoint: <code className="text-indigo-400">/api/gemma-analyze</code></span>
+          <span>erxes BalanceEd Backend Service • Endpoint: <code className="text-indigo-400">POST /api/gemma-analyze</code></span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs"

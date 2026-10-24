@@ -9,7 +9,7 @@ interface Props {
 }
 
 const DAYS = ['Даваа', 'Мягмар', 'Лхагва', 'Пүрэв', 'Баасан', 'Бямба', 'Ням'] as const;
-const DAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+const DAYS_EN = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
 
 export const AddScheduleModal: React.FC<Props> = ({ isOpen, onClose, onAddBlock, language }) => {
   const [dayIndex, setDayIndex] = useState(0);

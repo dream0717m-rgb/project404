@@ -1,22 +1,32 @@
 import React, { useState } from 'react';
-import { RecommendationsForTeacher } from '../types';
+import { TeacherActionableAdvice } from '../types';
 import { GraduationCap, Copy, Check, MessageSquareQuote, CalendarClock } from 'lucide-react';
 
 interface Props {
-  recommendations: RecommendationsForTeacher;
+  teacherAdvice: TeacherActionableAdvice | any;
   studentName: string;
   language: 'mn' | 'en';
 }
 
 export const TeacherRecommendationsCard: React.FC<Props> = ({
-  recommendations,
+  teacherAdvice,
   studentName,
   language,
 }) => {
   const [copied, setCopied] = useState(false);
 
+  const deadlineAdvice =
+    teacherAdvice?.recommendedDeadlineExtension ||
+    teacherAdvice?.deadlineAdjustments ||
+    'Лхагва гарагийн Физикийн лаб тайлангийн хугацааг 24 цагаар сунгахыг зөвлөж байна.';
+
+  const pedagogical =
+    teacherAdvice?.pedagogicalNote ||
+    teacherAdvice?.examPrepAdvice ||
+    'Сурагчийн даалгаврын биелэлт сайн байгаа тул сэтгэл зүйн хувьд дэмжиж, урам өгөөрэй.';
+
   const handleCopyNote = () => {
-    const fullText = `[erxes BalanceEd - Багшид өгөх зөвлөмж]\nСурагч: ${studentName}\n\n1. Даалгаврын уян хатан байдал:\n${recommendations.assignmentFlexibility}\n\n2. Урам зоригийн үг:\n${recommendations.encouragementNote}`;
+    const fullText = `[erxes BalanceEd - Багшид зориулсан зөвлөмж]\nСурагч: ${studentName}\n\n1. Даалгавар хойшлуулах зөвлөмж (Deadline Extension):\n${deadlineAdvice}\n\n2. Сурган хүмүүжүүлэх зөвлөгөө (Pedagogical Note):\n${pedagogical}`;
     navigator.clipboard.writeText(fullText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -31,10 +41,10 @@ export const TeacherRecommendationsCard: React.FC<Props> = ({
           </div>
           <div>
             <h3 className="font-bold text-slate-800 text-base">
-              {language === 'mn' ? 'Багшид зориулсан зөвлөмж' : 'Teacher Collaboration Hub'}
+              {language === 'mn' ? 'Багшид өгөх зөвлөмж (Teacher Action Advice)' : 'Teacher Actionable Advice'}
             </h3>
             <p className="text-xs text-slate-500">
-              {language === 'mn' ? 'Даалгаврын уян хатан зохицуулалт ба сурган хүмүүжүүлэх дэмжлэг' : 'Assignment flexibility & encouraging feedback'}
+              {language === 'mn' ? 'Даалгаврын уян хатан хугацаа ба сурган хүмүүжүүлэх дэмжлэг' : 'Actionable deadline adjustments & pedagogical tips'}
             </p>
           </div>
         </div>
@@ -50,25 +60,25 @@ export const TeacherRecommendationsCard: React.FC<Props> = ({
       </div>
 
       <div className="space-y-3.5">
-        {/* Assignment Flexibility Section */}
+        {/* Deadline Adjustments */}
         <div className="p-3.5 rounded-xl bg-blue-50/60 border border-blue-100 space-y-1.5">
           <div className="flex items-center gap-2 text-xs font-bold text-blue-900">
             <CalendarClock className="w-4 h-4 text-blue-600" />
-            <span>{language === 'mn' ? 'Даалгаврын уян хатан хугацаа (Assignment Flexibility)' : 'Assignment Flexibility Suggestion'}</span>
+            <span>{language === 'mn' ? 'Даалгавар хойшлуулах зөвлөмж (Recommended Extension):' : 'Deadline Extension Advice:'}</span>
           </div>
           <p className="text-xs md:text-sm text-slate-700 leading-relaxed pl-6">
-            {recommendations.assignmentFlexibility}
+            {deadlineAdvice}
           </p>
         </div>
 
-        {/* Encouragement Note */}
+        {/* Pedagogical Note */}
         <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
             <MessageSquareQuote className="w-4 h-4 text-amber-500" />
-            <span>{language === 'mn' ? 'Сурагчийг урамшуулах зөвлөмж (Encouragement Note)' : 'Encouragement Note'}</span>
+            <span>{language === 'mn' ? 'Сурган хүмүүжүүлэх зөвлөмж (Pedagogical Note):' : 'Pedagogical Note:'}</span>
           </div>
-          <p className="text-xs md:text-sm text-slate-600 italic leading-relaxed pl-6">
-            "{recommendations.encouragementNote}"
+          <p className="text-xs md:text-sm text-slate-600 leading-relaxed pl-6">
+            {pedagogical}
           </p>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MatchedOpportunity, OpportunityItem } from '../types';
-import { Award, Compass, Plus, CheckCircle, ExternalLink, Clock, MapPin } from 'lucide-react';
+import { Award, Compass, Plus, CheckCircle, Clock, MapPin, Sparkles } from 'lucide-react';
 
 interface Props {
   matchedOpportunities: MatchedOpportunity[];
@@ -16,7 +16,6 @@ export const MatchedOpportunitiesList: React.FC<Props> = ({
   language,
 }) => {
   const [addedIds, setAddedIds] = useState<string[]>([]);
-  const [selectedOp, setSelectedOp] = useState<OpportunityItem | null>(null);
 
   const handleAdd = (id: string) => {
     if (addedIds.includes(id)) return;
@@ -35,11 +34,11 @@ export const MatchedOpportunitiesList: React.FC<Props> = ({
           </div>
           <div>
             <h3 className="font-bold text-slate-800 text-base">
-              {language === 'mn' ? 'Тохирох боломж ба үйл ажиллагаанууд' : 'AI-Matched Opportunities'}
+              {language === 'mn' ? 'Тохирох боломж ба сайн дурын ажил' : 'Matched Opportunities'}
             </h3>
             <p className="text-xs text-slate-500">
               {language === 'mn'
-                ? 'Сурагчийн сонирхол, чөлөөт цагийн цонх болон сэтгэл зүйн ачаалалд тааруулсан'
+                ? 'Сурагчийн сонирхол, ур чадвар болон чөлөөт цагийн цонхонд нийцсэн'
                 : 'Matched based on free slots, interests, and burnout-prevention'}
             </p>
           </div>
@@ -51,14 +50,16 @@ export const MatchedOpportunitiesList: React.FC<Props> = ({
 
       <div className="space-y-4">
         {matchedOpportunities.map((op, index) => {
-          const detail = allOpportunities.find((o) => o.id === op.opportunityId);
+          const detail = allOpportunities.find((o) => o.opportunityId === op.opportunityId);
           const isAdded = addedIds.includes(op.opportunityId);
 
-          // Score color
+          const score = (op as any).matchScorePercentage ?? (op as any).matchScore ?? 95;
+          const reason = (op as any).fitReasonMongolian || (op as any).matchReasonMongolian || 'Сурагчийн сонирхолд тохирсон үйл ажиллагаа.';
+
           const scoreColor =
-            op.matchScore >= 90
+            score >= 90
               ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
-              : op.matchScore >= 80
+              : score >= 80
               ? 'text-indigo-600 bg-indigo-50 border-indigo-200'
               : 'text-amber-600 bg-amber-50 border-amber-200';
 
@@ -75,9 +76,9 @@ export const MatchedOpportunitiesList: React.FC<Props> = ({
                     <h4 className="font-bold text-slate-900 text-sm md:text-base leading-snug">
                       {op.title}
                     </h4>
-                    {detail?.provider && (
+                    {detail?.organizer && (
                       <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-medium">
-                        {detail.provider}
+                        {detail.organizer}
                       </span>
                     )}
                   </div>
@@ -87,23 +88,27 @@ export const MatchedOpportunitiesList: React.FC<Props> = ({
                     <span className="font-semibold text-violet-900 mr-1.5">
                       {language === 'mn' ? '💡 Тохирсон шалтгаан:' : '💡 Match Reason:'}
                     </span>
-                    {op.matchReasonMongolian}
+                    {reason}
                   </p>
 
                   {/* Meta tags */}
                   {detail && (
                     <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 pt-1">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        {detail.timeCommitmentHoursWeekly} цаг/долоо хоногт
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                        {detail.format} ({detail.location})
-                      </span>
-                      {detail.preferredDays.length > 0 && (
+                      {detail.timeSlot && (
+                        <span className="flex items-center gap-1 font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                          <Clock className="w-3.5 h-3.5" />
+                          {detail.timeSlot}
+                        </span>
+                      )}
+                      {detail.level && (
+                        <span className="flex items-center gap-1">
+                          <Sparkles className="w-3.5 h-3.5 text-slate-400" />
+                          {detail.level}
+                        </span>
+                      )}
+                      {detail.requiredSkills && detail.requiredSkills.length > 0 && (
                         <span className="text-slate-400">
-                          Өдрүүд: <strong className="text-slate-600">{detail.preferredDays.join(', ')}</strong>
+                          Шаардлагатай: <strong className="text-slate-600">{detail.requiredSkills.join(', ')}</strong>
                         </span>
                       )}
                     </div>
@@ -112,13 +117,11 @@ export const MatchedOpportunitiesList: React.FC<Props> = ({
 
                 {/* Right match score and actions */}
                 <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 min-w-[120px]">
-                  {/* Score badge */}
                   <div className={`px-3 py-1.5 rounded-xl border text-center font-bold text-xs flex items-center gap-1.5 ${scoreColor}`}>
                     <Award className="w-4 h-4" />
-                    <span>{op.matchScore}% тохироц</span>
+                    <span>{score}% тохироц</span>
                   </div>
 
-                  {/* Add button */}
                   <button
                     onClick={() => handleAdd(op.opportunityId)}
                     disabled={isAdded}
@@ -136,7 +139,7 @@ export const MatchedOpportunitiesList: React.FC<Props> = ({
                     ) : (
                       <>
                         <Plus className="w-3.5 h-3.5" />
-                        <span>{language === 'mn' ? 'Хуваарьт нэмэх' : 'Add to Plan'}</span>
+                        <span>{language === 'mn' ? 'Хуваарьт нэмэх' : 'Add to Schedule'}</span>
                       </>
                     )}
                   </button>

@@ -1,17 +1,6 @@
 import React, { useState } from 'react';
 import { OpportunityItem } from '../types';
-import {
-  Sparkles,
-  Plus,
-  Search,
-  Filter,
-  Building,
-  Calendar,
-  Clock,
-  MapPin,
-  CheckCircle2,
-  Tag,
-} from 'lucide-react';
+import { Sparkles, Plus, Search, Building, Clock } from 'lucide-react';
 
 interface Props {
   opportunities: OpportunityItem[];
@@ -25,56 +14,42 @@ export const OpportunityDirectory: React.FC<Props> = ({
   language,
 }) => {
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedProviderType, setSelectedProviderType] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // New opportunity form state
   const [newTitle, setNewTitle] = useState('');
-  const [newProvider, setNewProvider] = useState('');
-  const [newProviderType, setNewProviderType] = useState<'school' | 'teacher' | 'ngo' | 'global'>('teacher');
-  const [newCategory, setNewCategory] = useState<'stem' | 'volunteer' | 'arts' | 'leadership' | 'sports' | 'language'>('stem');
-  const [newHours, setNewHours] = useState(2);
-  const [newDays, setNewDays] = useState('Бямба');
-  const [newFormat, setNewFormat] = useState<'In-person' | 'Online' | 'Hybrid'>('Hybrid');
+  const [newOrganizer, setNewOrganizer] = useState('');
+  const [newSkills, setNewSkills] = useState('Graphic Design, Digital Art');
+  const [newTimeSlot, setNewTimeSlot] = useState('Friday 15:30-17:30');
+  const [newLevel, setNewLevel] = useState('School Level');
   const [newDesc, setNewDesc] = useState('');
 
   const filtered = opportunities.filter((op) => {
-    const matchSearch =
+    return (
       op.title.toLowerCase().includes(search.toLowerCase()) ||
-      op.provider.toLowerCase().includes(search.toLowerCase()) ||
-      op.descriptionMongolian.toLowerCase().includes(search.toLowerCase());
-    const matchCat = selectedCategory === 'all' || op.category === selectedCategory;
-    const matchType = selectedProviderType === 'all' || op.providerType === selectedProviderType;
-    return matchSearch && matchCat && matchType;
+      op.organizer.toLowerCase().includes(search.toLowerCase()) ||
+      (op.descriptionMongolian && op.descriptionMongolian.toLowerCase().includes(search.toLowerCase()))
+    );
   });
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim() || !newProvider.trim()) return;
+    if (!newTitle.trim() || !newOrganizer.trim()) return;
 
     const created: OpportunityItem = {
-      id: `op-${Date.now()}`,
+      opportunityId: `OPP-${Date.now()}`,
       title: newTitle.trim(),
-      titleEn: newTitle.trim(),
-      provider: newProvider.trim(),
-      providerType: newProviderType,
-      category: newCategory,
-      timeCommitmentHoursWeekly: Number(newHours) || 2,
-      preferredDays: newDays.split(',').map((d) => d.trim()),
-      format: newFormat,
-      location: newFormat === 'Online' ? 'Цахим / Google Meet' : 'Улаанбаатар хот',
-      skillsRequired: ['Идэвх санаачилга', 'Хамтран ажиллах чадвар'],
-      descriptionMongolian: newDesc.trim() || 'Сурагчдын хувь хүний болон академик хөгжлийг дэмжих боломж.',
-      deadline: '2026-12-31',
-      contactPerson: 'Зохион байгуулагч',
+      organizer: newOrganizer.trim(),
+      requiredSkills: newSkills.split(',').map((s) => s.trim()),
+      timeSlot: newTimeSlot.trim() || 'Friday 15:30-17:30',
+      level: newLevel,
+      descriptionMongolian: newDesc.trim() || 'Сурагчдын бүтээлч хөгжлийг дэмжих боломж.',
     };
 
     onAddOpportunity(created);
     setShowCreateModal(false);
-    // Reset form
     setNewTitle('');
-    setNewProvider('');
+    setNewOrganizer('');
     setNewDesc('');
   };
 
@@ -90,8 +65,8 @@ export const OpportunityDirectory: React.FC<Props> = ({
           </div>
           <p className="text-xs text-slate-500 mt-1">
             {language === 'mn'
-              ? 'Багш, сургууль болон олон улсын байгууллагуудаас нийтэлсэн сайн дурын болон хөгжлийн хөтөлбөрүүд'
-              : 'Verified opportunities from teachers, high schools, NGOs, and global partners'}
+              ? 'Багш, сургуулиас санал болгож буй сайн дурын ажил, клуб болон төслүүд'
+              : 'Verified opportunities from teachers, school clubs, and organizations'}
           </p>
         </div>
 
@@ -100,106 +75,75 @@ export const OpportunityDirectory: React.FC<Props> = ({
           className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition-all"
         >
           <Plus className="w-4 h-4" />
-          <span>{language === 'mn' ? 'Багш/Байгууллагын боломж нийтлэх' : 'Post Opportunity'}</span>
+          <span>{language === 'mn' ? 'Боломж нийтлэх' : 'Post Opportunity'}</span>
         </button>
       </div>
 
-      {/* Filters row */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={
-              language === 'mn'
-                ? 'Боломж, байгууллага, чиглэлээр хайх...'
-                : 'Search opportunities by title, provider...'
-            }
-            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-
-        {/* Category Filter */}
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          <option value="all">{language === 'mn' ? 'Бүх чиглэл' : 'All Categories'}</option>
-          <option value="stem">STEM & AI</option>
-          <option value="volunteer">{language === 'mn' ? 'Сайн дурын ажил' : 'Volunteer'}</option>
-          <option value="language">{language === 'mn' ? 'Англи хэл / Мэтгэлцээн' : 'Debate / Language'}</option>
-          <option value="leadership">{language === 'mn' ? 'Манлайлал & Эко' : 'Leadership & Eco'}</option>
-        </select>
-
-        {/* Provider Type Filter */}
-        <select
-          value={selectedProviderType}
-          onChange={(e) => setSelectedProviderType(e.target.value)}
-          className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          <option value="all">{language === 'mn' ? 'Бүх нийтлэгч' : 'All Providers'}</option>
-          <option value="teacher">{language === 'mn' ? 'Багш нар' : 'Teachers'}</option>
-          <option value="school">{language === 'mn' ? 'Сургууль' : 'Schools'}</option>
-          <option value="ngo">{language === 'mn' ? 'ТББ / Олон нийтийн' : 'NGOs'}</option>
-          <option value="global">{language === 'mn' ? 'Олон улсын' : 'Global'}</option>
-        </select>
+      {/* Search */}
+      <div className="relative">
+        <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={
+            language === 'mn'
+              ? 'Боломж, зохион байгуулагчаар хайх...'
+              : 'Search opportunities by title, organizer...'
+          }
+          className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
       </div>
 
       {/* Grid of opportunities */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filtered.map((op) => (
           <div
-            key={op.id}
+            key={op.opportunityId}
             className="p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-sm transition-all bg-white flex flex-col justify-between"
           >
             <div className="space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700">
-                  {op.category.toUpperCase()}
+                  {op.level}
                 </span>
-                <span className="text-[11px] text-slate-400 font-medium">
-                  {op.providerType === 'teacher'
-                    ? 'Багшийн санал'
-                    : op.providerType === 'school'
-                    ? 'Сургууль'
-                    : op.providerType === 'ngo'
-                    ? 'ТББ'
-                    : 'Олон улсын'}
-                </span>
+                <span className="text-[11px] font-mono text-slate-400">{op.opportunityId}</span>
               </div>
 
               <h4 className="font-bold text-slate-900 text-sm">{op.title}</h4>
               <p className="text-xs text-indigo-700 font-medium flex items-center gap-1">
                 <Building className="w-3.5 h-3.5 text-indigo-500" />
-                {op.provider}
+                {op.organizer}
               </p>
 
-              <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                {op.descriptionMongolian}
-              </p>
+              {op.descriptionMongolian && (
+                <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                  {op.descriptionMongolian}
+                </p>
+              )}
+
+              {op.requiredSkills && op.requiredSkills.length > 0 && (
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {op.requiredSkills.map((sk) => (
+                    <span key={sk} className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                      {sk}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-              <div className="flex items-center gap-2">
-                <span className="flex items-center gap-1 font-semibold text-slate-700">
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  {op.timeCommitmentHoursWeekly}ц/7 хоногт
-                </span>
-                <span>•</span>
-                <span>{op.format}</span>
-              </div>
-              <span className="text-[11px] text-slate-400">
-                Хугацаа: {op.deadline}
+              <span className="flex items-center gap-1 font-semibold text-slate-700">
+                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                {op.timeSlot}
               </span>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Modal for adding new opportunity */}
+      {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
@@ -225,98 +169,70 @@ export const OpportunityDirectory: React.FC<Props> = ({
                   required
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Жишээ: Англи хэлний ярианы клуб үе тэнгийнхэндээ"
+                  placeholder="Жишээ: School Eco-Club Poster Design Volunteer"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Зохион байгуулагч / Багш:
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newOrganizer}
+                  onChange={(e) => setNewOrganizer(e.target.value)}
+                  placeholder="Жишээ: 111-р сургууль / Багш Болд"
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Байгууллага / Багш:
-                  </label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Цагийн хуваарь:</label>
                   <input
                     type="text"
-                    required
-                    value={newProvider}
-                    onChange={(e) => setNewProvider(e.target.value)}
-                    placeholder="Жишээ: 1-р сургуулийн Англи хэлний тэнхим"
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Төрөл:
-                  </label>
-                  <select
-                    value={newProviderType}
-                    onChange={(e) => setNewProviderType(e.target.value as any)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
-                  >
-                    <option value="teacher">Багш (Teacher)</option>
-                    <option value="school">Сургууль (School)</option>
-                    <option value="ngo">ТББ (NGO)</option>
-                    <option value="global">Олон улсын (Global)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Чиглэл:
-                  </label>
-                  <select
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value as any)}
-                    className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-white"
-                  >
-                    <option value="stem">STEM & AI</option>
-                    <option value="volunteer">Сайн дур</option>
-                    <option value="language">Хэл, мэтгэлцээн</option>
-                    <option value="leadership">Манлайлал</option>
-                    <option value="arts">Урлаг</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    7 хоногт (цаг):
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="20"
-                    value={newHours}
-                    onChange={(e) => setNewHours(Number(e.target.value))}
+                    value={newTimeSlot}
+                    onChange={(e) => setNewTimeSlot(e.target.value)}
+                    placeholder="Friday 15:30-17:30"
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Хэлбэр:
-                  </label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Түвшин:</label>
                   <select
-                    value={newFormat}
-                    onChange={(e) => setNewFormat(e.target.value as any)}
-                    className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-white"
+                    value={newLevel}
+                    onChange={(e) => setNewLevel(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
                   >
-                    <option value="Hybrid">Hybrid</option>
-                    <option value="Online">Online</option>
-                    <option value="In-person">Танхим</option>
+                    <option value="School Level">School Level</option>
+                    <option value="City Level">City Level</option>
+                    <option value="National Level">National Level</option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Товч тайлбар (Монгол хэлээр):
+                  Шаардагдах ур чадвар (таслалаар тусгаарлах):
                 </label>
+                <input
+                  type="text"
+                  value={newSkills}
+                  onChange={(e) => setNewSkills(e.target.value)}
+                  placeholder="Graphic Design, Digital Art"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Товч тайлбар:</label>
                 <textarea
                   rows={2}
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
-                  placeholder="Энэхүү үйл ажиллагааны зорилго, давуу тал..."
+                  placeholder="Үйл ажиллагааны зорилго, давуу тал..."
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>

@@ -1,14 +1,16 @@
 import React from 'react';
-import { WorkloadAnalysis } from '../types';
+import { Analytics } from '../types';
 import { AlertTriangle, CheckCircle2, Flame, HeartPulse } from 'lucide-react';
 
 interface Props {
-  analysis: WorkloadAnalysis;
+  analysis: Analytics;
   language: 'mn' | 'en';
 }
 
 export const WorkloadMeter: React.FC<Props> = ({ analysis, language }) => {
-  const { workloadScore, status, stressRisk } = analysis;
+  const workloadScore = analysis.workloadScore;
+  const status = analysis.status;
+  const stressRisk = analysis.stressRiskLevel || (analysis as any).stressRisk || 'Medium';
 
   // Status color mapping
   const getStatusColor = () => {

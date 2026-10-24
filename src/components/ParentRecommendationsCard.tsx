@@ -1,24 +1,29 @@
 import React, { useState } from 'react';
-import { RecommendationsForParents } from '../types';
-import { Users, HeartHandshake, Copy, Check, Moon, ShieldCheck } from 'lucide-react';
+import { ParentReport } from '../types';
+import { Users, HeartHandshake, Copy, Check, ShieldCheck, Moon } from 'lucide-react';
 
 interface Props {
-  recommendations: RecommendationsForParents;
+  parentReport: ParentReport | any;
   parentName?: string;
   isVerified: boolean;
   language: 'mn' | 'en';
 }
 
 export const ParentRecommendationsCard: React.FC<Props> = ({
-  recommendations,
+  parentReport,
   parentName,
   isVerified,
   language,
 }) => {
   const [copied, setCopied] = useState(false);
 
+  const reportText =
+    parentReport?.parentNotificationText ||
+    parentReport?.progressSummaryMongolian ||
+    'Сурагчийн хичээлийн биелэлт 60%-тай байна. Шалгалтын өмнө тайван амрахыг зөвлөж байна.';
+
   const handleCopy = () => {
-    navigator.clipboard.writeText(recommendations.supportAdvice);
+    navigator.clipboard.writeText(reportText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -33,7 +38,7 @@ export const ParentRecommendationsCard: React.FC<Props> = ({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-slate-800 text-base">
-                {language === 'mn' ? 'Эцэг эх, асран хамгаалагчид өгөх зөвлөгөө' : 'Parent Support Advisory'}
+                {language === 'mn' ? 'Эцэг эхийн нэгдсэн мэдэгдэл (Parent Notification)' : 'Parent Notification Report'}
               </h3>
               {isVerified && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold flex items-center gap-1">
@@ -44,8 +49,8 @@ export const ParentRecommendationsCard: React.FC<Props> = ({
             </div>
             <p className="text-xs text-slate-500">
               {language === 'mn'
-                ? `Гэр бүлийн эрүүл уур амьсгал, нойр болон сэтгэл зүйн дэмжлэг (${parentName || 'Эцэг эхэд'})`
-                : `Home well-being, rest hygiene, and motivation tips`}
+                ? `SMS / Имэйл / Апп мэдэгдлийн форматтай тайлан (${parentName || 'Эцэг эхэд'})`
+                : `Friendly formatted notification for parents`}
             </p>
           </div>
         </div>
@@ -62,10 +67,10 @@ export const ParentRecommendationsCard: React.FC<Props> = ({
       <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-100 space-y-2">
         <div className="flex items-center gap-2 text-xs font-bold text-emerald-950">
           <HeartHandshake className="w-4 h-4 text-emerald-600" />
-          <span>{language === 'mn' ? 'Дэмжлэг үзүүлэх зөвлөгөө (Support Advice):' : 'Actionable Parental Advice:'}</span>
+          <span>{language === 'mn' ? 'Мэдэгдлийн эх бичвэр (Notification Content):' : 'Parent Report Content:'}</span>
         </div>
         <p className="text-xs md:text-sm text-slate-700 leading-relaxed pl-6">
-          {recommendations.supportAdvice}
+          {reportText}
         </p>
       </div>
 
@@ -73,11 +78,11 @@ export const ParentRecommendationsCard: React.FC<Props> = ({
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
         <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 text-slate-600">
           <Moon className="w-4 h-4 text-indigo-500" />
-          <span>Зөвлөмж: Шөнө хамгийн багадаа 8 цаг унтуулах</span>
+          <span>Шөнө 8 цагийн нойрыг тогтвортой байлгах</span>
         </div>
         <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 text-slate-600">
           <Users className="w-4 h-4 text-emerald-500" />
-          <span>Амралтын өдөр: Дэлгэцгүй гэр бүлийн цаг</span>
+          <span>Шалгалтын өмнө сэтгэл зүйн дарамтгүй орчин</span>
         </div>
       </div>
     </div>

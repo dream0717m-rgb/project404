@@ -1,6 +1,6 @@
 import React from 'react';
 import { StudentProfile } from '../types';
-import { User, School, Target, Award, Moon, Sparkles, Check } from 'lucide-react';
+import { School, Target, Moon, Check, Palette, Award } from 'lucide-react';
 
 interface Props {
   students: StudentProfile[];
@@ -20,7 +20,7 @@ export const StudentProfileBar: React.FC<Props> = ({
       {/* Student selection pill tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-          {language === 'mn' ? 'Сурагчийн профайл сонгох:' : 'Select Student Profile:'}
+          {language === 'mn' ? 'Сурагчийн профайл:' : 'Select Student:'}
         </span>
 
         <div className="flex flex-wrap gap-2">
@@ -36,14 +36,10 @@ export const StudentProfileBar: React.FC<Props> = ({
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                 }`}
               >
-                <img
-                  src={st.avatar}
-                  alt={st.name}
-                  className="w-4 h-4 rounded-full object-cover"
-                />
+                <img src={st.avatar} alt={st.name} className="w-4 h-4 rounded-full object-cover" />
                 <span>{st.name}</span>
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-violet-700' : 'bg-slate-200 text-slate-600'}`}>
-                  {st.grade}-р анги
+                  {st.grade}
                 </span>
                 {isSelected && <Check className="w-3.5 h-3.5" />}
               </button>
@@ -64,10 +60,7 @@ export const StudentProfileBar: React.FC<Props> = ({
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold text-slate-900">{currentStudent.name}</h2>
               <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700">
-                {currentStudent.grade}-р анги
-              </span>
-              <span className="text-xs text-slate-400 font-medium hidden sm:inline">
-                {currentStudent.schoolShift}
+                {currentStudent.grade}
               </span>
             </div>
             <p className="text-xs text-slate-600 flex items-center gap-1 mt-0.5">
@@ -81,21 +74,21 @@ export const StudentProfileBar: React.FC<Props> = ({
         <div className="flex flex-wrap items-center gap-4 text-xs">
           <div>
             <span className="text-[11px] text-slate-400 font-medium block">
-              {language === 'mn' ? 'Зорилтот мэргэжил:' : 'Career Goal:'}
+              {language === 'mn' ? 'Зорилтот мэргэжил:' : 'Career Goals:'}
             </span>
             <span className="font-semibold text-slate-800 flex items-center gap-1">
               <Target className="w-3.5 h-3.5 text-rose-500" />
-              {currentStudent.targetCareer}
+              {currentStudent.aboutMe?.careerGoals?.join(', ') || 'Industrial Design'}
             </span>
           </div>
 
           <div>
             <span className="text-[11px] text-slate-400 font-medium block">
-              {language === 'mn' ? 'Шалгалт / ЭЕШ:' : 'Target Exam:'}
+              {language === 'mn' ? 'Гол ур чадвар:' : 'Key Skills:'}
             </span>
             <span className="font-semibold text-slate-800 flex items-center gap-1">
-              <Award className="w-3.5 h-3.5 text-amber-500" />
-              {currentStudent.targetExam}
+              <Palette className="w-3.5 h-3.5 text-amber-500" />
+              {currentStudent.aboutMe?.skills?.slice(0, 2).join(', ')}
             </span>
           </div>
 
@@ -113,8 +106,8 @@ export const StudentProfileBar: React.FC<Props> = ({
 
       {/* Interests tags */}
       <div className="flex items-center gap-2 flex-wrap pt-1">
-        <span className="text-[11px] text-slate-400 font-medium">Сонирхол ба авьяас:</span>
-        {currentStudent.interests.map((interest) => (
+        <span className="text-[11px] text-slate-400 font-medium">Сонирхол:</span>
+        {currentStudent.aboutMe?.interests?.map((interest) => (
           <span
             key={interest}
             className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition-colors"

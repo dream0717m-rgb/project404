@@ -1,79 +1,118 @@
+export type UserRole = 'student' | 'teacher' | 'parent';
 export type WorkloadStatus = 'Balanced' | 'Moderate' | 'Overworked';
 export type StressRiskLevel = 'Low' | 'Medium' | 'High';
+export type ConflictType = 'ExamConflict' | 'WorkloadConflict' | 'ExtracurricularOverlap';
+export type SeverityLevel = 'Low' | 'Medium' | 'High';
 
-export interface WorkloadAnalysis {
-  workloadScore: number; // 1-10
-  status: WorkloadStatus;
-  stressRisk: StressRiskLevel;
-  aiSummaryMongolian: string;
+export interface ScheduleConflict {
+  examOrAssignment: string;
+  conflictDescriptionMongolian: string;
+  type?: ConflictType;
+  title?: string;
+  date?: string;
+  severity?: SeverityLevel;
 }
 
 export interface MatchedOpportunity {
   opportunityId: string;
   title: string;
-  matchScore: number; // 0-100%
+  matchScore: string | number;
   matchReasonMongolian: string;
+  matchScorePercentage?: number;
+  fitReasonMongolian?: string;
 }
 
-export interface RecommendationsForTeacher {
-  assignmentFlexibility: string;
-  encouragementNote: string;
+export interface TeacherRecommendations {
+  deadlineAdjustments: string;
+  pedagogicalNote?: string;
 }
 
-export interface RecommendationsForParents {
-  supportAdvice: string;
+export interface ParentReport {
+  progressSummaryMongolian: string;
+  parentNotificationText?: string;
 }
 
-// Exactly matches the user's required JSON schema
-export interface Gemma4Response {
-  studentName: string;
-  workloadAnalysis: WorkloadAnalysis;
+// Gemma 4 Backend System Output Schema
+export interface Gemma4BackendAnalysis {
+  workloadScore: number;
+  status: WorkloadStatus;
+  completionPercentage: number;
+  aiSummaryMongolian: string;
+  scheduleConflicts: ScheduleConflict[];
   matchedOpportunities: MatchedOpportunity[];
-  recommendationsForTeacher: RecommendationsForTeacher;
-  recommendationsForParents: RecommendationsForParents;
+  teacherRecommendations: TeacherRecommendations;
+  parentReport: ParentReport;
+  studentId?: string;
+  studentName?: string;
+}
+
+export type Gemma4BackendResponse = Gemma4BackendAnalysis;
+export type Gemma4Response = Gemma4BackendAnalysis;
+export type Analytics = any;
+export type AcademicMetrics = any;
+export type TeacherActionableAdvice = any;
+
+export interface AssignmentItem {
+  id: string;
+  title: string;
+  dueDate: string;
+  isCompleted: boolean;
+  subject: string;
+  assignedBy?: string;
+}
+
+export interface ExamItem {
+  id: string;
+  subject: string;
+  examDate: string;
+  time: string;
+  room?: string;
 }
 
 export interface StudentProfile {
+  studentId: string;
   id: string;
   name: string;
-  grade: number; // 10, 11, 12
+  grade: string;
   school: string;
-  schoolShift: 'Morning (08:00 - 13:30)' | 'Afternoon (13:30 - 18:30)';
   avatar: string;
-  interests: string[];
-  targetCareer: string;
-  targetExam: string;
+  aboutMe: {
+    interests: string[];
+    skills: string[];
+    careerGoals: string[];
+  };
   sleepGoalHours: number;
   personalMotto?: string;
   parentContact: {
     parentName: string;
     phone: string;
-    relationship: 'Ээж' | 'Аав' | 'Асран хамгаалагч';
+    relationship: string;
   };
 }
 
 export type ActivityCategory =
-  | 'school'       // Хичээл (сургууль)
-  | 'homework'     // Бие даалт / Даалгавар
-  | 'tutoring'     // Давталт, дамжаа
-  | 'sport'        // Спорт & фитнесс
-  | 'volunteer'    // Сайн дурын ажил
-  | 'club'         // Дугуйлан, клуб
-  | 'sleep'        // Нойр
-  | 'rest';        // Амралт, чөлөөт цаг
+  | 'school'
+  | 'homework'
+  | 'tutoring'
+  | 'sport'
+  | 'volunteer'
+  | 'club'
+  | 'sleep'
+  | 'rest'
+  | 'free_slot';
 
 export interface ScheduleBlock {
   id: string;
-  dayIndex: number; // 0=Даваа, 6=Ням
+  dayIndex: number;
   dayName: 'Даваа' | 'Мягмар' | 'Лхагва' | 'Пүрэв' | 'Баасан' | 'Бямба' | 'Ням';
-  dayEn: 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
-  startTime: string; // "14:00"
-  endTime: string;   // "16:00"
+  dayEn: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+  startTime: string;
+  endTime: string;
   durationHours: number;
   title: string;
   category: ActivityCategory;
   location?: string;
-  notes?: string;
+  isFreeSlot?: boolean;
 }
 
 export interface WeeklySchedule {
@@ -82,22 +121,33 @@ export interface WeeklySchedule {
   verifiedByParent: boolean;
   parentName: string;
   verifiedDate: string | null;
+  parentNote?: string;
   blocks: ScheduleBlock[];
 }
 
 export interface OpportunityItem {
-  id: string;
+  opportunityId: string;
   title: string;
-  titleEn: string;
-  provider: string;
-  providerType: 'school' | 'teacher' | 'ngo' | 'global';
-  category: 'stem' | 'volunteer' | 'arts' | 'leadership' | 'sports' | 'language';
-  timeCommitmentHoursWeekly: number;
-  preferredDays: string[];
-  format: 'In-person' | 'Online' | 'Hybrid';
-  location: string;
-  skillsRequired: string[];
-  descriptionMongolian: string;
-  deadline: string;
-  contactPerson: string;
+  organizer: string;
+  requiredSkills: string[];
+  timeSlot: string;
+  level: string;
+  descriptionMongolian?: string;
+  category?: string;
+}
+
+export interface UnifiedAppState {
+  studentProfile: StudentProfile;
+  parentVerification: {
+    isScheduleApproved: boolean;
+    approvedDate: string | null;
+    parentName: string;
+    parentNote: string;
+  };
+  weeklySchedule: WeeklySchedule;
+  assignments: AssignmentItem[];
+  upcomingExams: ExamItem[];
+  opportunities: OpportunityItem[];
+  gemmaAnalysis: Gemma4BackendAnalysis;
+  lastSyncTimestamp: string;
 }
