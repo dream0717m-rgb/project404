@@ -1,0 +1,6 @@
+{
+  "name": "erxes BalanceEd - Gemma 4 AI EdTech Assistant",
+  "description": "AI EdTech Assistant for Mongolian high school students to balance academic load, extracurricular activities, and volunteer opportunities without burnout.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
